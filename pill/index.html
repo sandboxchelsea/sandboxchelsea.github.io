@@ -3,117 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Artwork Interaction</title>
+    <title>Three.js GLB Model</title>
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-        }
-        #root {
-            width: 100%;
-            height: 100%;
-            background-color: #111827;
-        }
+        body { margin: 0; }
+        canvas { display: block; }
     </style>
 </head>
 <body>
-    <div id="root"></div>
-    <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/three@0.137.0/build/three.min.js"></script>
-    <script src="https://unpkg.com/@react-three/fiber@7.0.26/dist/react-three-fiber.umd.js"></script>
-    <script src="https://unpkg.com/@react-three/drei@8.10.0/dist/drei.umd.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script type="text/babel">
-        const { Canvas, useFrame, useLoader } = ReactThreeFiber;
-        const { OrbitControls, Environment, useGLTF } = drei;
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        // Set up scene, camera, and renderer
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
 
-        function Model({ url }) {
-            const { scene } = useGLTF(url);
-            const modelRef = React.useRef();
+        // Add lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(0, 1, 1);
+        scene.add(directionalLight);
 
-            useFrame((state, delta) => {
-                if (modelRef.current) {
-                    modelRef.current.rotation.y += delta * 0.5;
-                }
-            });
+        // Load the GLB model
+        const loader = new THREE.GLTFLoader();
+        let model;
 
-            return <primitive object={scene} ref={modelRef} />;
+        loader.load(
+            '/pill/pill.glb', // Path to your GLB file
+            function (gltf) {
+                model = gltf.scene;
+                scene.add(model);
+
+                // Adjust the camera position based on the model's size
+                const box = new THREE.Box3().setFromObject(model);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const fov = camera.fov * (Math.PI / 180);
+                let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+
+                cameraZ *= 3; // Zoom out a little so object fits in view
+
+                camera.position.z = cameraZ;
+
+                // Center the camera on the object
+                const controls = new THREE.OrbitControls(camera, renderer.domElement);
+                controls.target.copy(center);
+                controls.update();
+            },
+            function (xhr) {
+                console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+            },
+            function (error) {
+                console.error('An error happened', error);
+            }
+        );
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (model) {
+                model.rotation.y += 0.001;
+            }
+
+            renderer.render(scene, camera);
         }
 
-        function App() {
-            const [isLoaded, setIsLoaded] = React.useState(false);
+        animate();
 
-            return (
-                <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-                    <Canvas 
-                        camera={{ position: [0, 0, 5], fov: 50 }}
-                        onCreated={() => setIsLoaded(true)}
-                    >
-                        <ambientLight intensity={0.5} />
-                        <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1} castShadow />
-                        <Model url="/rsc/pill.gltf" />
-                        <OrbitControls enablePan={false} enableZoom={true} enableRotate={true} />
-                        <Environment preset="studio" />
-                    </Canvas>
-                    {!isLoaded && (
-                        <div style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                            color: 'white',
-                            fontSize: '24px'
-                        }}>
-                            Loading 3D model...
-                        </div>
-                    )}
-                    <div style={{
-                        position: 'absolute',
-                        bottom: '16px',
-                        left: '16px',
-                        color: 'white',
-                        fontSize: '14px',
-                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                        padding: '8px',
-                        borderRadius: '4px'
-                    }}>
-                        <p>This is a 3D model of a pill. Use mouse or touch to rotate and zoom.</p>
-                        <button 
-                            style={{
-                                marginTop: '8px',
-                                backgroundColor: '#4CAF50',
-                                border: 'none',
-                                color: 'white',
-                                padding: '10px 20px',
-                                textAlign: 'center',
-                                textDecoration: 'none',
-                                display: 'inline-block',
-                                fontSize: '16px',
-                                cursor: 'pointer',
-                                borderRadius: '4px'
-                            }}
-                            onClick={() => alert('This is a 3D model of a pill. It demonstrates the shape and form of a typical medicinal pill.')}
-                        >
-                            More Info
-                        </button>
-                    </div>
-                </div>
-            );
+        // Handle window resizing
+        window.addEventListener('resize', onWindowResize, false);
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
         }
-
-        // Preload the model
-        useGLTF.preload("/rsc/pill.gltf");
-
-        ReactDOM.render(<App />, document.getElementById('root'));
     </script>
 </body>
 </html>
