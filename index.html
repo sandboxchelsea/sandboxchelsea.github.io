@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<!--
+	2024
+	Chanwoo Lee
+-->
+<html>
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="style.css">
+
+	<title>SANDBOX CHELSEA</title>
+	
+	<meta name="description" content="Sandbox for Chelsea Project Studio">
+	<meta property="og:url" content="https://sandboxchelsea.github.io">
+	<meta property="og:type" content="website">
+	<meta property="og:title" content="SANDBOX CHELSEA">
+	<meta property="og:description" content="Sandbox for Chelsea Project Studio">
+	<meta property="og:image" content="/resources/csrc.jpg"> <!-- 200x200px - 1200x1200px -->
+</head>
+
+<body>
+	<div class="bg">
+	</div>
+	<div class="main">
+        <div class="title"><h1>CHELSEAPROJECTS</h1></div>
+		
+
+        <div class="gap"></div>
+
+        <h2>ABOUT</h2>
+        <p>CHELSEAPROJECTS is an indipendant innovation design technology studio started in Chelsea, London. 
+            Based on the research-driven innovation and design culture deeply rooted in that of the Imperial College London and the Royal College of Art.</p>
+        
+        <div class="gap"></div>
+        
+        <h2>DOMAIN</h2>
+        <p>Emerging Technology<br />Computer Interface<br />Computer Interaction<br />Future Strategy<br />Media Art</p>
+
+        <div class="gap"></div>
+
+        <h2>SERVICES</h2>
+        <p>Research<br />Design<br />Development</p>
+        
+        <div class="gap"></div>
+
+        <h2>CONTACT</h2>
+        <p>Research<br />Design<br />Development</p>
+
+        <div class="footer">
+			<!-- <p>CHANWOO LEE, 2024. London &amp; Seoul</p> -->
+		</div>
+			
+		<script>
+		function setBlurEffect() {
+			const texts = document.querySelectorAll('#blur');
+			const windowHeight = window.innerHeight;
+		
+			texts.forEach(text => {
+				const rect = text.getBoundingClientRect();
+				const textCenterY = rect.top + rect.height / 2;
+		
+				// Calculate the blur amount and opacity based on the Y position
+				let blurAmount = Math.max(0, (textCenterY - 0.65 * windowHeight) / (windowHeight / 2) * 10);
+				let opacityAmount = Math.max(0, 1 - (textCenterY - 0.55 * windowHeight) / (windowHeight / 2));
+		
+				// Apply the blur and opacity to the text
+				text.style.filter = `blur(${blurAmount}px)`;
+				text.style.opacity = opacityAmount;
+			});
+		}
+		
+		// Initialize blur effect on page load
+		document.addEventListener('DOMContentLoaded', function () {
+			setBlurEffect();
+		});
+		
+		// Adjust blur effect on scroll
+		document.addEventListener('scroll', function () {
+			setBlurEffect();
+		});
+		
+		</script>
+	</div>
+</body>
+
+<footer>
+</footer>
+</html>
