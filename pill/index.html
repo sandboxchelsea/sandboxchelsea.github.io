@@ -4,87 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Three.js GLB Model</title>
-    <style>
-        body { margin: 0; }
-        canvas { display: block; }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <script>
-        // Set up scene, camera, and renderer
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+    <script src="scene.js"></script>
 
-        // Add lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-        scene.add(ambientLight);
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        directionalLight.position.set(0, 1, 1);
-        scene.add(directionalLight);
-
-        // Load the GLB model
-        const loader = new THREE.GLTFLoader();
-        let model;
-
-        loader.load(
-            '/pill/pill.glb', // Path to your GLB file
-            function (gltf) {
-                model = gltf.scene;
-                scene.add(model);
-
-                // Adjust the camera position based on the model's size
-                const box = new THREE.Box3().setFromObject(model);
-                const center = box.getCenter(new THREE.Vector3());
-                const size = box.getSize(new THREE.Vector3());
-
-                const maxDim = Math.max(size.x, size.y, size.z);
-                const fov = camera.fov * (Math.PI / 180);
-                let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
-
-                cameraZ *= 3; // Zoom out a little so object fits in view
-
-                camera.position.z = cameraZ;
-
-                // Center the camera on the object
-                const controls = new THREE.OrbitControls(camera, renderer.domElement);
-                controls.target.copy(center);
-                controls.update();
-            },
-            function (xhr) {
-                console.log((xhr.loaded / xhr.total * 100) + '% loaded');
-            },
-            function (error) {
-                console.error('An error happened', error);
-            }
-        );
-
-        // Animation loop
-        function animate() {
-            requestAnimationFrame(animate);
-
-            if (model) {
-                model.rotation.y += 0.001;
-            }
-
-            renderer.render(scene, camera);
-        }
-
-        animate();
-
-        // Handle window resizing
-        window.addEventListener('resize', onWindowResize, false);
-
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-    </script>
+    <!-- <h1>CHELSEAPROJECTS</h1>  
+		
+    <p>CHELSEAPROJECTS is an independent innovation design technology studio founded in Chelsea, London. <br />
+        Research-driven innovation, design, and engineering deeply rooted in the culture of Imperial College London and the Royal College of Art.</p>
+    <div class="gap"></div>
+     -->
 </body>
 </html>
