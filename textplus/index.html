@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Text</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        #controls {
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 15px;
+            margin-right: 10px;
+        }
+        #status {
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        #dynamicText {
+            border: 1px solid #ccc;
+            padding: 10px;
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+        #volumeIndicator {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 20px;
+        }
+        #dataContainer {
+            display: none;
+        }
+        #rawData {
+            width: 100%;
+            height: 200px;
+        }
+        #interimSpeech {
+            opacity: 0.5;
+            margin-bottom: 10px;
+            font-style: italic;
+        }
+        #dynamicText, #interimSpeech {
+            border: 1px solid #ccc;
+            padding: 10px;
+            min-height: 50px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Dynamic Text</h1>
+    
+    <div id="controls">
+        <button id="toggleBtn">Start Listening</button>
+        <button id="clearBtn">Clear</button>
+        <button id="dataBtn">Show/Hide Data</button>
+        <button id="copyDataBtn">Copy Data</button>
+    </div>
+    
+    <div id="status">Not listening</div>
+    <div id="interimSpeech"></div>
+    <div id="dynamicText"></div>
+    
+    <svg id="volumeIndicator" viewBox="0 0 120 120">
+        <circle id="volumeCircle" cx="60" cy="60" r="10" fill="#808080"/>
+    </svg>
+    
+    <div id="dataContainer">
+        <h3>Recognized Words Data:</h3>
+        <textarea id="rawData" readonly></textarea>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
