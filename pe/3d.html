@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>3D Positional Encoding Visualization with Interactive Graphs</title>
+    <title>PE Visualization 3D</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
@@ -13,12 +13,13 @@
     </style>
 </head>
 <body>
-    <h1>3D Positional Encoding Visualization with Interactive Graphs</h1>
+    <h1>Positional Encoding Visualisation 3D</h1>
+    <p>Rotate the cube to see the time from -20 to 90<br/>Chanwoo Lee 1001</p>
     <div id="plot"></div>
     <div id="dimensionSelector">
         <label for="dimension">Select Encoding Dimension:</label>
-        <input type="number" id="dimension" name="dimension" min="0" max="63" value="0">
-        <button id="updateButton">Update Graph</button>
+        <input type="range" id="dimension" name="dimension" min="0" max="63" value="0">
+        <span id="dimensionValue">0</span>
     </div>
     <div id="linePlot"></div>
     <script>
@@ -120,7 +121,7 @@
                 zaxis: { title: 'Value' },
             },
             margin: { l: 0, r: 0, b: 0, t: 50 },
-            title: '3D Positional Encoding Visualization with Game Events',
+            title: '3D PE Visualisation of Soccer Game',
             legend: { x: 0.8, y: 0.9 },
         };
 
@@ -173,13 +174,11 @@
         updateLinePlot(0);
 
         // Event Listener for Dimension Selector
-        document.getElementById('updateButton').addEventListener('click', () => {
+        document.getElementById('dimension').addEventListener('input', () => {
             const dimensionInput = document.getElementById('dimension');
+            const dimensionValue = document.getElementById('dimensionValue');
             let dimension = parseInt(dimensionInput.value);
-            if (isNaN(dimension) || dimension < 0 || dimension > 63) {
-                alert('Please enter a valid dimension between 0 and 63.');
-                return;
-            }
+            dimensionValue.textContent = dimension;
             updateLinePlot(dimension);
         });
     </script>
