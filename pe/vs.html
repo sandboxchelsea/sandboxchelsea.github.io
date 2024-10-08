@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dynamic Cloud-like CLIP Embedding Visualization</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/9.4.4/math.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+        #plot { width: 100%; height: 600px; }
+    </style>
+</head>
+<body>
+    <h1>Dynamic Cloud-like CLIP Embedding Visualization</h1>
+    <p>This 3D scatter plot represents a dynamic, cloud-like embedding space for 300 video clips, with continuous motion and high variability.</p>
+    <div id="plot"></div>
+    <script>
+        function generateDynamicCloudEmbeddings(numClips) {
+            return Array(numClips).fill(0).map(() => {
+                const baseMotion = math.random(0, 1);
+                const baseSemantic = math.random(0, 1);
+                const baseFrequency = math.random(0, 1);
+                
+                // Introduce more variability with additional random factors
+                const randomFactor1 = math.random(0, 1);
+                const randomFactor2 = math.random(0, 1);
+
+                // Non-linear transformations with increased complexity
+                const x = Math.sin(baseMotion * Math.PI) * Math.cos(baseSemantic * Math.PI * randomFactor1) * 2;
+                const y = Math.sin(baseSemantic * Math.PI) * Math.cos(baseFrequency * Math.PI * randomFactor2) * 2;
+                const z = Math.sin(baseFrequency * Math.PI) * Math.cos(baseMotion * Math.PI * (randomFactor1 + randomFactor2)) * 2;
+
+                // Add some noise for further dispersion
+                const noise = () => (math.random() - 0.5) * 0.8;
+                
+                // Generate random frequencies for dynamic movement
+                const freqX = math.random(0.001, 0.005);
+                const freqY = math.random(0.001, 0.005);
+                const freqZ = math.random(0.001, 0.005);
+                const phase = math.random(0, 2 * Math.PI);
+
+                return {
+                    x: x + noise(),
+                    y: y + noise(),
+                    z: z + noise(),
+                    motionIntensity: baseMotion,
+                    semanticComplexity: baseSemantic,
+                    frequencyCharacteristic: baseFrequency,
+                    freqX: freqX,
+                    freqY: freqY,
+                    freqZ: freqZ,
+                    phase: phase
+                };
+            });
+        }
+
+        function updateEmbeddings(embeddings, frame) {
+            return embeddings.map(d => ({
+                x: d.x + Math.sin(frame * d.freqX + d.phase) * 0.02,
+                y: d.y + Math.sin(frame * d.freqY + d.phase) * 0.02,
+                z: d.z + Math.sin(frame * d.freqZ + d.phase) * 0.02,
+                motionIntensity: d.motionIntensity,
+                semanticComplexity: d.semanticComplexity,
+                frequencyCharacteristic: d.frequencyCharacteristic
+            }));
+        }
+
+        function createPlot() {
+            const embeddings = generateDynamicCloudEmbeddings(300);
+            
+            const trace = {
+                x: embeddings.map(d => d.x),
+                y: embeddings.map(d => d.y),
+                z: embeddings.map(d => d.z),
+                mode: 'markers',
+                type: 'scatter3d',
+                marker: {
+                    size: 5,
+                    color: embeddings.map(d => d.frequencyCharacteristic),
+                    colorscale: 'Viridis',
+                    opacity: 0.8,
+                    colorbar: {
+                        title: 'Frequency Characteristic'
+                    }
+                },
+                hoverinfo: 'text',
+                text: embeddings.map(d => 
+                    `Motion Intensity: ${d.motionIntensity.toFixed(3)}<br>` +
+                    `Semantic Complexity: ${d.semanticComplexity.toFixed(3)}<br>` +
+                    `Frequency Characteristic: ${d.frequencyCharacteristic.toFixed(3)}`
+                )
+            };
+
+            const layout = {
+                scene: {
+                    xaxis: { title: 'Motion Dynamics', range: [-3, 3] },
+                    yaxis: { title: 'Semantic Continuity', range: [-3, 3] },
+                    zaxis: { title: 'Frequency Dynamics', range: [-3, 3] }
+                },
+                margin: { l: 0, r: 0, b: 0, t: 50 },
+                title: 'Dynamic Cloud-like CLIP Embedding Visualization'
+            };
+
+            Plotly.newPlot('plot', [trace], layout);
+
+            let frame = 0;
+            function animate() {
+                frame++;
+                const updatedEmbeddings = updateEmbeddings(embeddings, frame);
+                Plotly.animate('plot', {
+                    data: [{x: updatedEmbeddings.map(d => d.x), y: updatedEmbeddings.map(d => d.y), z: updatedEmbeddings.map(d => d.z)}],
+                    traces: [0],
+                    layout: {}
+                }, {
+                    transition: {duration: 0},
+                    frame: {duration: 0, redraw: false}
+                });
+                requestAnimationFrame(animate);
+            }
+            
+            animate();
+        }
+
+        // Create the plot when the page loads
+        window.onload = createPlot;
+    </script>
+</body>
+</html>
