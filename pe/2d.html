@@ -6,19 +6,87 @@
     <title>PE Visualisation 2D</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
-        #chart, #intensityChart { width: 100%; height: 400px; }
-        .event-marker { stroke: black; stroke-width: 2; }
-        .tooltip { position: absolute; background: white; border: 1px solid #ddd; padding: 10px; display: none; }
-        .highlight { stroke: yellow; stroke-width: 2; fill: none; }
-        .event-point { cursor: pointer; }
-        button { margin-bottom: 10px; }
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            transition: background-color 0.3s, color 0.3s;
+        }
+        #chart, #intensityChart { 
+            width: 100%; 
+            height: 400px; 
+            transition: background-color 0.3s;
+        }
+        .event-marker { 
+            stroke-width: 2; 
+        }
+        .tooltip { 
+            position: absolute; 
+            border: 1px solid #ddd; 
+            padding: 10px; 
+            display: none; 
+        }
+        .highlight { 
+            stroke: yellow; 
+            stroke-width: 2; 
+            fill: none; 
+        }
+        .event-point { 
+            cursor: pointer; 
+        }
+        button { 
+            margin-bottom: 10px; 
+            margin-right: 10px;
+            padding: 5px 10px; 
+            cursor: pointer;
+        }
+        .dark-mode {
+            background-color: #000000;
+            color: #ffffff;
+        }
+        .dark-mode #chart, .dark-mode #intensityChart {
+            background-color: #000000;
+        }
+        .dark-mode .tooltip {
+            background: #333333;
+            border-color: #555555;
+            color: #ffffff;
+        }
+        .dark-mode button {
+            background-color: #333333;
+            color: #ffffff;
+            border: none;
+        }
+        .dark-mode button:hover {
+            background-color: #555555;
+        }
+        .light-mode {
+            background-color: #ffffff;
+            color: #000000;
+        }
+        .light-mode #chart, .light-mode #intensityChart {
+            background-color: #ffffff;
+        }
+        .light-mode .tooltip {
+            background: #ffffff;
+            border-color: #dddddd;
+            color: #000000;
+        }
+        .light-mode button {
+            background-color: #f0f0f0;
+            color: #000000;
+            border: 1px solid #cccccc;
+        }
+        .light-mode button:hover {
+            background-color: #e0e0e0;
+        }
     </style>
 </head>
-<body>
+<body class="dark-mode">
     <h1>Positional Encoding Visualisation 2D</h1>
     <p>Hover on red dots to see event markers<br/>Chanwoo Lee 1001</p>
-    <button id="toggleEvents">Toggle Event Lines</button>
+    <button id="toggleElements">Hide Elements</button>
+    <button id="toggleMode">Switch to Light Mode</button>
     <div id="chart"></div>
     <div id="intensityChart"></div>
     <div id="tooltip" class="tooltip"></div>
@@ -43,8 +111,8 @@
                     intensity = Math.min(1, (t + 30) / 30);
                 } else if (t <= 90) {
                     intensity = 0.7 + Math.sin(t * Math.PI / 45) * 0.3;
-                    passing = 0.5 + Math.sin(t * Math.PI / 5) * 0.5; // High frequency
-                    goals = Math.max(0, Math.sin(t * Math.PI / 30) * 0.3); // Mid frequency
+                    passing = 0.5 + Math.sin(t * Math.PI / 5) * 0.5;
+                    goals = Math.max(0, Math.sin(t * Math.PI / 30) * 0.3);
                 }
                 
                 if (t === 23 || t === 78) {
@@ -101,18 +169,22 @@
             .attr("r", 3)
             .attr("fill", d => color(d.val));
 
-        svg.append("g")
+        const xAxis = svg.append("g")
+            .attr("class", "x-axis")
             .attr("transform", `translate(0,${height})`)
-            .call(d3.axisBottom(x).ticks(12))
-            .append("text")
+            .call(d3.axisBottom(x).ticks(12));
+
+        xAxis.append("text")
             .attr("x", width)
             .attr("y", -6)
             .style("text-anchor", "end")
             .text("Game Time (minutes)");
 
-        svg.append("g")
-            .call(d3.axisLeft(y))
-            .append("text")
+        const yAxis = svg.append("g")
+            .attr("class", "y-axis")
+            .call(d3.axisLeft(y));
+
+        yAxis.append("text")
             .attr("transform", "rotate(-90)")
             .attr("y", 6)
             .attr("dy", ".71em")
@@ -170,11 +242,13 @@
             .attr("stroke-width", 1.5)
             .attr("d", goalsLine);
 
-        intensitySvg.append("g")
+        const intensityXAxis = intensitySvg.append("g")
+            .attr("class", "intensity-x-axis")
             .attr("transform", "translate(0,120)")
             .call(d3.axisBottom(x).ticks(12));
 
-        intensitySvg.append("g")
+        const intensityYAxis = intensitySvg.append("g")
+            .attr("class", "intensity-y-axis")
             .call(d3.axisLeft(d3.scaleLinear().range([120, 0])));
 
         intensitySvg.append("text")
@@ -183,7 +257,6 @@
             .attr("text-anchor", "middle")
             .text("Game Intensity, Passing, and Goals Over Time");
 
-        // Add legend
         const legend = intensitySvg.append("g")
             .attr("font-family", "sans-serif")
             .attr("font-size", 10)
@@ -226,12 +299,36 @@
             .style("font-weight", "bold")
             .text("PE Visualisation of Soccer Game - x as time y as value");
 
-        // Toggle event lines
-        let eventsVisible = true;
-        d3.select("#toggleEvents").on("click", function() {
-            eventsVisible = !eventsVisible;
-            eventLines.style("display", eventsVisible ? null : "none");
-            d3.select(this).text(eventsVisible ? "Hide Event Lines" : "Show Event Lines");
+        let elementsVisible = true;
+        d3.select("#toggleElements").on("click", function() {
+            elementsVisible = !elementsVisible;
+            eventLines.style("display", elementsVisible ? null : "none");
+            eventPoints.style("display", elementsVisible ? null : "none");
+            xAxis.style("display", elementsVisible ? null : "none");
+            yAxis.style("display", elementsVisible ? null : "none");
+            intensityXAxis.style("display", elementsVisible ? null : "none");
+            intensityYAxis.style("display", elementsVisible ? null : "none");
+            d3.select(this).text(elementsVisible ? "Hide Elements" : "Show Elements");
+        });
+
+        let isDarkMode = true;
+        d3.select("#toggleMode").on("click", function() {
+            isDarkMode = !isDarkMode;
+            document.body.className = isDarkMode ? "dark-mode" : "light-mode";
+            d3.select(this).text(isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode");
+            
+            // Update axes colors
+            const axisColor = isDarkMode ? "#ffffff" : "#000000";
+            svg.selectAll(".x-axis, .y-axis").attr("color", axisColor);
+            intensitySvg.selectAll(".intensity-x-axis, .intensity-y-axis").attr("color", axisColor);
+            
+            // Update text colors
+            const textColor = isDarkMode ? "#ffffff" : "#000000";
+            svg.selectAll("text").attr("fill", textColor);
+            intensitySvg.selectAll("text").attr("fill", textColor);
+            
+            // Update event marker color
+            eventLines.attr("stroke", axisColor);
         });
     </script>
 </body>

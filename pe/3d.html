@@ -5,34 +5,58 @@
     <title>PE Visualization 3D</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
-        #plot { width: 100%; height: 600px; }
-        #linePlot { width: 100%; height: 400px; margin-top: 20px; }
-        #dimensionSelector { margin-top: 20px; }
-        label { font-weight: bold; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #000000;
+            color: #e0e0e0;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        #plot {
+            width: 100%;
+            height: 600px;
+        }
+        h1, p {
+            color: #ffffff;
+            transition: color 0.3s;
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin-right: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
     </style>
 </head>
 <body>
-    <h1>Positional Encoding Visualisation 3D</h1>
+    <h1>Positional Encoding Visualisation 3D (Interactive)</h1>
     <p>Rotate the cube to see the time from -20 to 90<br/>Chanwoo Lee 1001</p>
-    <div id="plot"></div>
-    <div id="dimensionSelector">
-        <label for="dimension">Select Encoding Dimension:</label>
-        <input type="range" id="dimension" name="dimension" min="0" max="63" value="0">
-        <span id="dimensionValue">0</span>
+    <div class="controls">
+        <button id="toggleElements">Show/Hide Elements</button>
+        <button id="toggleMode">Toggle Dark/Light Mode</button>
     </div>
-    <div id="linePlot"></div>
+    <div id="plot"></div>
     <script>
+        let showElements = false;
+        let isDarkMode = true;
+
         function generateData() {
             const x = [];
             const y = [];
             const z = [];
             const colors = [];
-            const timeSteps = [];
-            const dimensionValues = {};
 
             for (let t = -30; t <= 90; t++) {
-                timeSteps.push(t);
                 let intensity = 0;
                 if (t < 0) {
                     intensity = Math.min(1, (t + 30) / 30);
@@ -54,133 +78,91 @@
                     y.push(i);
                     z.push(val * intensity);
                     colors.push(val * intensity);
-
-                    if (!dimensionValues[i]) {
-                        dimensionValues[i] = [];
-                    }
-                    dimensionValues[i].push(val * intensity);
                 }
             }
 
-            return { x, y, z, colors, timeSteps, dimensionValues };
+            return { x, y, z, colors };
         }
 
-        const { x, y, z, colors, timeSteps, dimensionValues } = generateData();
+        function updatePlot() {
+            const { x, y, z, colors } = generateData();
 
-        const data = [{
-            x: x,
-            y: y,
-            z: z,
-            mode: 'markers',
-            marker: {
-                size: 2,
-                color: colors,
-                colorscale: 'RdYlBu',
-                colorbar: {
-                    title: 'Encoding Value',
-                },
-                opacity: 0.7,
-            },
-            type: 'scatter3d',
-            name: 'Positional Encoding',
-        }];
-
-        // Adding Game Events
-        const gameEvents = [
-            { time: -30, event: "Fans Entering Stadium" },
-            { time: 0, event: "Kickoff" },
-            { time: 23, event: "Goal (Team A)" },
-            { time: 52, event: "Red Card (Team B)" },
-            { time: 78, event: "Goal (Team B)" },
-            { time: 90, event: "End of Game" }
-        ];
-
-        const eventMarkers = {
-            x: gameEvents.map(e => e.time),
-            y: gameEvents.map(() => 32), // Middle of encoding dimensions
-            z: gameEvents.map(() => 0), // Base plane
-            mode: 'markers+text',
-            marker: {
-                size: 5,
-                color: 'black',
-                symbol: 'diamond',
-            },
-            text: gameEvents.map(e => e.event),
-            textposition: 'top center',
-            type: 'scatter3d',
-            name: 'Game Events',
-            hoverinfo: 'text',
-        };
-
-        data.push(eventMarkers);
-
-        const layout = {
-            scene: {
-                xaxis: { title: 'Time (minutes)' },
-                yaxis: { title: 'Encoding Dimension' },
-                zaxis: { title: 'Value' },
-            },
-            margin: { l: 0, r: 0, b: 0, t: 50 },
-            title: '3D PE Visualisation of Soccer Game',
-            legend: { x: 0.8, y: 0.9 },
-        };
-
-        Plotly.newPlot('plot', data, layout);
-
-        // Interactive Value-Time Graph
-        function updateLinePlot(dimension) {
-            const values = dimensionValues[dimension];
-            const trace = {
-                x: timeSteps,
-                y: values,
-                mode: 'lines+markers',
+            const data = [{
+                x: x,
+                y: y,
+                z: z,
+                mode: 'markers',
                 marker: {
-                    color: 'blue',
-                },
-                line: {
-                    color: 'blue',
-                },
-                name: `Dimension ${dimension}`,
-            };
-
-            const eventLines = gameEvents.map(event => {
-                return {
-                    x: [event.time, event.time],
-                    y: [Math.min(...values), Math.max(...values)],
-                    mode: 'lines',
-                    line: {
-                        color: 'red',
-                        width: 1,
-                        dash: 'dashdot',
+                    size: 2,
+                    color: colors,
+                    colorscale: 'RdYlBu',
+                    colorbar: {
+                        title: 'Encoding Value',
+                        titlefont: { color: isDarkMode ? '#e0e0e0' : '#000000' },
+                        tickfont: { color: isDarkMode ? '#e0e0e0' : '#000000' },
                     },
-                    name: event.event,
-                    hoverinfo: 'none',
-                };
-            });
+                    opacity: 0.7,
+                },
+                type: 'scatter3d',
+                name: 'Positional Encoding',
+            }];
 
-            const lineLayout = {
-                xaxis: { title: 'Time (minutes)' },
-                yaxis: { title: 'Value' },
-                title: `Value-Time Graph for Encoding Dimension ${dimension}`,
-                showlegend: false,
+            const layout = {
+                scene: {
+                    xaxis: { 
+                        showgrid: showElements,
+                        zeroline: showElements,
+                        showline: showElements,
+                        showticklabels: showElements,
+                        showaxeslabels: showElements,
+                        title: showElements ? 'Time' : ''
+                    },
+                    yaxis: { 
+                        showgrid: showElements,
+                        zeroline: showElements,
+                        showline: showElements,
+                        showticklabels: showElements,
+                        showaxeslabels: showElements,
+                        title: showElements ? 'Dimension' : ''
+                    },
+                    zaxis: { 
+                        showgrid: showElements,
+                        zeroline: showElements,
+                        showline: showElements,
+                        showticklabels: showElements,
+                        showaxeslabels: showElements,
+                        title: showElements ? 'Value' : ''
+                    },
+                    bgcolor: isDarkMode ? '#000000' : '#ffffff',
+                },
+                margin: { l: 0, r: 0, b: 0, t: 50 },
+                title: {
+                    text: showElements ? '3D PE Visualisation of Soccer Game' : '',
+                    font: { color: isDarkMode ? '#ffffff' : '#000000' }
+                },
+                paper_bgcolor: isDarkMode ? '#000000' : '#ffffff',
+                plot_bgcolor: isDarkMode ? '#000000' : '#ffffff',
+                font: { color: isDarkMode ? '#e0e0e0' : '#000000' },
             };
 
-            const lineData = [trace, ...eventLines];
-
-            Plotly.newPlot('linePlot', lineData, lineLayout);
+            Plotly.react('plot', data, layout);
         }
 
-        // Initial Plot
-        updateLinePlot(0);
-
-        // Event Listener for Dimension Selector
-        document.getElementById('dimension').addEventListener('input', () => {
-            const dimensionInput = document.getElementById('dimension');
-            const dimensionValue = document.getElementById('dimensionValue');
-            let dimension = parseInt(dimensionInput.value);
-            dimensionValue.textContent = dimension;
-            updateLinePlot(dimension);
+        document.getElementById('toggleElements').addEventListener('click', function() {
+            showElements = !showElements;
+            updatePlot();
         });
+
+        document.getElementById('toggleMode').addEventListener('click', function() {
+            isDarkMode = !isDarkMode;
+            document.body.style.backgroundColor = isDarkMode ? '#000000' : '#ffffff';
+            document.body.style.color = isDarkMode ? '#e0e0e0' : '#000000';
+            document.querySelector('h1').style.color = isDarkMode ? '#ffffff' : '#000000';
+            document.querySelector('p').style.color = isDarkMode ? '#ffffff' : '#000000';
+            updatePlot();
+        });
+
+        updatePlot();
     </script>
 </body>
 </html>
