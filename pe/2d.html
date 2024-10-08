@@ -36,13 +36,21 @@
             
             for (let t = -30; t <= 90; t++) {
                 let intensity = 0;
+                let passing = 0;
+                let goals = 0;
+
                 if (t < 0) {
                     intensity = Math.min(1, (t + 30) / 30);
                 } else if (t <= 90) {
                     intensity = 0.7 + Math.sin(t * Math.PI / 45) * 0.3;
+                    passing = 0.5 + Math.sin(t * Math.PI / 5) * 0.5; // High frequency
+                    goals = Math.max(0, Math.sin(t * Math.PI / 30) * 0.3); // Mid frequency
                 }
                 
-                if (t === 23 || t === 78) intensity = 1;
+                if (t === 23 || t === 78) {
+                    intensity = 1;
+                    goals = 1;
+                }
                 if (t === 52) intensity = 0.9;
                 
                 for (let i = 0; i < 64; i++) {
@@ -52,7 +60,7 @@
                     
                     if ((t === 23 || t === 78 || t === 52) && i < 20) val *= 2;
                     
-                    data.push({ t, i, val: val * intensity, intensity });
+                    data.push({ t, i, val: val * intensity, intensity, passing, goals });
                 }
             }
             return { data, gameEvents };
@@ -133,12 +141,34 @@
             .x(d => x(d.t))
             .y(d => d3.scaleLinear().range([120, 0])(d.intensity));
 
+        const passingLine = d3.line()
+            .x(d => x(d.t))
+            .y(d => d3.scaleLinear().range([120, 0])(d.passing));
+
+        const goalsLine = d3.line()
+            .x(d => x(d.t))
+            .y(d => d3.scaleLinear().range([120, 0])(d.goals));
+
         intensitySvg.append("path")
             .datum(data.filter(d => d.i === 0))
             .attr("fill", "none")
             .attr("stroke", "steelblue")
             .attr("stroke-width", 1.5)
             .attr("d", intensityLine);
+
+        intensitySvg.append("path")
+            .datum(data.filter(d => d.i === 0))
+            .attr("fill", "none")
+            .attr("stroke", "green")
+            .attr("stroke-width", 1.5)
+            .attr("d", passingLine);
+
+        intensitySvg.append("path")
+            .datum(data.filter(d => d.i === 0))
+            .attr("fill", "none")
+            .attr("stroke", "red")
+            .attr("stroke-width", 1.5)
+            .attr("d", goalsLine);
 
         intensitySvg.append("g")
             .attr("transform", "translate(0,120)")
@@ -151,7 +181,29 @@
             .attr("x", width / 2)
             .attr("y", 160)
             .attr("text-anchor", "middle")
-            .text("Game Intensity Over Time");
+            .text("Game Intensity, Passing, and Goals Over Time");
+
+        // Add legend
+        const legend = intensitySvg.append("g")
+            .attr("font-family", "sans-serif")
+            .attr("font-size", 10)
+            .attr("text-anchor", "end")
+            .selectAll("g")
+            .data(["Intensity", "Passing", "Goals"])
+            .enter().append("g")
+            .attr("transform", (d, i) => `translate(${width},${i * 20})`);
+
+        legend.append("rect")
+            .attr("x", -19)
+            .attr("width", 19)
+            .attr("height", 19)
+            .attr("fill", (d, i) => ["steelblue", "green", "red"][i]);
+
+        legend.append("text")
+            .attr("x", -24)
+            .attr("y", 9.5)
+            .attr("dy", "0.32em")
+            .text(d => d);
 
         const tooltip = d3.select("#tooltip");
 
