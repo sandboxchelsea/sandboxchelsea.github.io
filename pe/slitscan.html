@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smooth Video Slitscan Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        #videoPreview, #slitscanImage {
+            max-width: 100%;
+            display: block;
+            margin: 20px auto;
+        }
+        button {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .control {
+            margin: 20px 0;
+        }
+        .control label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .control input[type="range"] {
+            width: 100%;
+        }
+        #frameCount, #sliceWidthValue, #maxLengthValue {
+            text-align: center;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Video Slitscanner</h1>
+    <input type="file" id="videoInput" accept="video/*">
+    <video id="videoPreview" controls style="display: none;"></video>
+    <div id="controls" style="display: none;">
+        <div class="control">
+            <label for="frameControl">Number of frames to scan:</label>
+            <input type="range" id="frameControl" min="10" max="1000" value="100">
+            <div id="frameCount">Frames to scan: 100</div>
+        </div>
+        <div class="control">
+            <label for="sliceWidthControl">Slice width (px):</label>
+            <input type="range" id="sliceWidthControl" min="0.2" max="5" value="1" step="0.1">
+            <div id="sliceWidthValue">Slice width: 1.0px</div>
+        </div>
+        <div class="control">
+            <label for="maxLengthControl">Max length (px):</label>
+            <input type="range" id="maxLengthControl" min="100" max="10000" value="1000" step="100">
+            <div id="maxLengthValue">Max length: 1000px</div>
+        </div>
+        <div class="control">
+            <label for="smoothingControl">Smoothing level:</label>
+            <input type="range" id="smoothingControl" min="0" max="1" value="0.5" step="0.1">
+            <div id="smoothingValue">Smoothing: 0.5</div>
+        </div>
+        <div class="control">
+            <label for="antiAliasingCheck">
+                <input type="checkbox" id="antiAliasingCheck" checked>
+                Enable Anti-aliasing
+            </label>
+        </div>
+        <button id="generateButton">Generate Smooth Slitscan</button>
+        <button id="fixLongerSideButton">Fix Longer Side</button>
+    </div>
+    <canvas id="slitscanCanvas" style="display: none;"></canvas>
+    <img id="slitscanImage" style="display: none;">
+
+    <script>
+        const videoInput = document.getElementById('videoInput');
+        const videoPreview = document.getElementById('videoPreview');
+        const controls = document.getElementById('controls');
+        const frameControl = document.getElementById('frameControl');
+        const frameCount = document.getElementById('frameCount');
+        const sliceWidthControl = document.getElementById('sliceWidthControl');
+        const sliceWidthValue = document.getElementById('sliceWidthValue');
+        const maxLengthControl = document.getElementById('maxLengthControl');
+        const maxLengthValue = document.getElementById('maxLengthValue');
+        const smoothingControl = document.getElementById('smoothingControl');
+        const smoothingValue = document.getElementById('smoothingValue');
+        const antiAliasingCheck = document.getElementById('antiAliasingCheck');
+        const generateButton = document.getElementById('generateButton');
+        const fixLongerSideButton = document.getElementById('fixLongerSideButton');
+        const slitscanCanvas = document.getElementById('slitscanCanvas');
+        const slitscanImage = document.getElementById('slitscanImage');
+
+        let framesToScan = 100;
+        let maxFrames = 1000;
+        let sliceWidth = 1;
+        let maxLength = 1000;
+        let smoothingLevel = 0.5;
+
+        videoInput.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            videoPreview.src = URL.createObjectURL(file);
+            videoPreview.style.display = 'block';
+            videoPreview.onloadedmetadata = calculateFrames;
+        });
+
+        function calculateFrames() {
+            const fps = 30; // Assume 30 fps if not available
+            maxFrames = Math.floor(videoPreview.duration * fps);
+            framesToScan = Math.min(1000, maxFrames);
+            
+            frameControl.max = maxFrames;
+            frameControl.value = framesToScan;
+            frameCount.textContent = `Frames to scan: ${framesToScan}`;
+            
+            controls.style.display = 'block';
+        }
+
+        frameControl.addEventListener('input', function() {
+            framesToScan = parseInt(this.value);
+            frameCount.textContent = `Frames to scan: ${framesToScan}`;
+        });
+
+        sliceWidthControl.addEventListener('input', function() {
+            sliceWidth = parseFloat(this.value);
+            sliceWidthValue.textContent = `Slice width: ${sliceWidth.toFixed(1)}px`;
+        });
+
+        maxLengthControl.addEventListener('input', function() {
+            maxLength = parseInt(this.value);
+            maxLengthValue.textContent = `Max length: ${maxLength}px`;
+        });
+
+        smoothingControl.addEventListener('input', function() {
+            smoothingLevel = parseFloat(this.value);
+            smoothingValue.textContent = `Smoothing: ${smoothingLevel.toFixed(1)}`;
+        });
+
+        generateButton.addEventListener('click', processVideo);
+        fixLongerSideButton.addEventListener('click', fixLongerSide);
+
+        function processVideo() {
+            const ctx = slitscanCanvas.getContext('2d');
+            ctx.imageSmoothingEnabled = antiAliasingCheck.checked;
+            ctx.imageSmoothingQuality = 'high';
+
+            slitscanCanvas.width = Math.ceil(framesToScan * sliceWidth);
+            slitscanCanvas.height = videoPreview.videoHeight;
+
+            let slitscanX = 0;
+            const frameInterval = videoPreview.duration / framesToScan;
+
+            function processFrame() {
+                if (slitscanX >= slitscanCanvas.width || videoPreview.currentTime >= videoPreview.duration) {
+                    applySmoothing(ctx, slitscanCanvas.width, slitscanCanvas.height);
+                    slitscanImage.src = slitscanCanvas.toDataURL();
+                    slitscanImage.style.display = 'block';
+                    return;
+                }
+
+                // Draw slice of video frame with interpolation
+                ctx.drawImage(
+                    videoPreview,
+                    videoPreview.videoWidth / 2 - sliceWidth / 2, 0, sliceWidth, videoPreview.videoHeight,
+                    slitscanX, 0, sliceWidth, slitscanCanvas.height
+                );
+
+                slitscanX += sliceWidth;
+                videoPreview.currentTime += frameInterval;
+
+                if (videoPreview.currentTime < videoPreview.duration) {
+                    videoPreview.onseeked = processFrame;
+                } else {
+                    applySmoothing(ctx, slitscanCanvas.width, slitscanCanvas.height);
+                    slitscanImage.src = slitscanCanvas.toDataURL();
+                    slitscanImage.style.display = 'block';
+                }
+            }
+
+            videoPreview.currentTime = 0;
+            videoPreview.onseeked = processFrame;
+        }
+
+        function applySmoothing(ctx, width, height) {
+            if (smoothingLevel > 0) {
+                const imageData = ctx.getImageData(0, 0, width, height);
+                const data = imageData.data;
+                const smoothedData = new Uint8ClampedArray(data.length);
+
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        const idx = (y * width + x) * 4;
+                        let r = 0, g = 0, b = 0, a = 0, count = 0;
+
+                        for (let dy = -1; dy <= 1; dy++) {
+                            for (let dx = -1; dx <= 1; dx++) {
+                                const nx = x + dx;
+                                const ny = y + dy;
+                                if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                    const nidx = (ny * width + nx) * 4;
+                                    r += data[nidx];
+                                    g += data[nidx + 1];
+                                    b += data[nidx + 2];
+                                    a += data[nidx + 3];
+                                    count++;
+                                }
+                            }
+                        }
+
+                        smoothedData[idx] = Math.round(r / count * smoothingLevel + data[idx] * (1 - smoothingLevel));
+                        smoothedData[idx + 1] = Math.round(g / count * smoothingLevel + data[idx + 1] * (1 - smoothingLevel));
+                        smoothedData[idx + 2] = Math.round(b / count * smoothingLevel + data[idx + 2] * (1 - smoothingLevel));
+                        smoothedData[idx + 3] = Math.round(a / count * smoothingLevel + data[idx + 3] * (1 - smoothingLevel));
+                    }
+                }
+
+                ctx.putImageData(new ImageData(smoothedData, width, height), 0, 0);
+            }
+        }
+
+        function fixLongerSide() {
+            const ctx = slitscanCanvas.getContext('2d');
+            ctx.imageSmoothingEnabled = antiAliasingCheck.checked;
+            ctx.imageSmoothingQuality = 'high';
+
+            const longerSide = Math.max(slitscanCanvas.width, slitscanCanvas.height);
+            const scaleFactor = maxLength / longerSide;
+≥÷
+            const newWidth = Math.round(slitscanCanvas.width * scaleFactor);
+            const newHeight = Math.round(slitscanCanvas.height * scaleFactor);
+
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = newWidth;
+            tempCanvas.height = newHeight;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.imageSmoothingEnabled = antiAliasingCheck.checked;
+            tempCtx.imageSmoothingQuality = 'high';
+
+            tempCtx.drawImage(slitscanCanvas, 0, 0, newWidth, newHeight);
+            
+            slitscanCanvas.width = newWidth;
+            slitscanCanvas.height = newHeight;
+            ctx.drawImage(tempCanvas, 0, 0);
+
+            applySmoothing(ctx, newWidth, newHeight);
+            slitscanImage.src = slitscanCanvas.toDataURL();
+            slitscanImage.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
