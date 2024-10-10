@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Interactive Gradient with Black Hole Warp Effect</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.6/dat.gui.min.js"></script>
+  <script id="fragmentShader" type="x-shader/x-fragment">
+    precision mediump float;
+
+    uniform vec2 resolution;
+    uniform vec2 focalPoint;
+    uniform float distortionAmount;
+    uniform vec3 color1;
+    uniform vec3 color2;
+    uniform float gradientSpeed;
+    uniform float distortionFrequency;
+    uniform float colorBlendIntensity;
+    uniform float warpIntensity;
+    uniform float hueShift;
+    uniform float blackHoleStrength;
+
+    vec3 adjustHue(vec3 color, float hueShift) {
+        float angle = hueShift * 3.14159 / 180.0;
+        float cosAngle = cos(angle);
+        float sinAngle = sin(angle);
+        mat3 hueRotation = mat3(
+            vec3(0.299, 0.587, 0.114) + vec3(0.701, -0.587, -0.114) * cosAngle + vec3(0.168, -0.330, -0.497) * sinAngle,
+            vec3(0.299, 0.587, 0.114) + vec3(-0.299, 0.413, -0.114) * cosAngle + vec3(0.328, 0.035, -0.292) * sinAngle,
+            vec3(0.299, 0.587, 0.114) + vec3(-0.3, -0.588, 0.886) * cosAngle + vec3(-0.327, 0.327, 0.327) * sinAngle
+        );
+        return color * hueRotation;
+    }
+
+    void main() {
+        vec2 uv = gl_FragCoord.xy / resolution.xy;
+        vec2 blackHoleDirection = uv - focalPoint;
+
+        // Calculate distance to the focal point and adjust UV coordinates to create a black hole effect
+        float distance = length(blackHoleDirection);
+        float blackHoleWarp = blackHoleStrength / (distance + 0.1); // Intensifies near the focal point
+        uv -= blackHoleDirection * blackHoleWarp * warpIntensity;
+
+        // Calculate color gradient based on position and gradient speed
+        float gradient = sin(uv.y * 3.14159 * gradientSpeed) * 0.5 + 0.5;
+
+        // Use focal point to distort gradient colors
+        float distFactor = sin((uv.x * distortionFrequency + uv.y) * 6.0) * distortionAmount;
+
+        // Calculate RGB colors using gradients
+        vec3 color = mix(color1, color2, gradient);
+        color.r += sin(uv.x * 3.0 + distFactor) * colorBlendIntensity;
+        color.g += sin(uv.y * 2.0 + distFactor) * colorBlendIntensity;
+        color.b += cos(uv.x * 3.0 + uv.y * 2.0) * colorBlendIntensity;
+
+        // Apply hue adjustment to final color
+        color = adjustHue(color, hueShift);
+
+        gl_FragColor = vec4(color, 1.0);
+    }
+  </script>
+  <script>
+    let scene, camera, renderer, material, plane, gui;
+    let params = {
+      distortionAmount: 0.5,
+      gradientSpeed: 1.0,
+      distortionFrequency: 1.0,
+      colorBlendIntensity: 0.5,
+      warpIntensity: 0.2,
+      blackHoleStrength: 0.5,  // Controls the intensity of the black hole effect
+      focalX: 0.5,  // Focal point X coordinate in normalized space
+      focalY: 0.5,  // Focal point Y coordinate in normalized space
+      hueShift: 0.0,
+      color1: [255, 0, 128],
+      color2: [0, 128, 255],
+    };
+
+    function init() {
+      // Set up scene, camera, and renderer
+      scene = new THREE.Scene();
+      camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 10);
+      camera.position.z = 1;
+      renderer = new THREE.WebGLRenderer();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      // Create a plane and apply the shader material
+      let geometry = new THREE.PlaneBufferGeometry(2, 2);
+      let fragmentShader = document.getElementById('fragmentShader').textContent;
+
+      material = new THREE.ShaderMaterial({
+        uniforms: {
+          resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+          focalPoint: { value: new THREE.Vector2(params.focalX, params.focalY) },
+          distortionAmount: { value: params.distortionAmount },
+          gradientSpeed: { value: params.gradientSpeed },
+          distortionFrequency: { value: params.distortionFrequency },
+          colorBlendIntensity: { value: params.colorBlendIntensity },
+          warpIntensity: { value: params.warpIntensity },
+          blackHoleStrength: { value: params.blackHoleStrength },
+          hueShift: { value: params.hueShift },
+          color1: { value: new THREE.Color(`rgb(${params.color1[0]}, ${params.color1[1]}, ${params.color1[2]})`) },
+          color2: { value: new THREE.Color(`rgb(${params.color2[0]}, ${params.color2[1]}, ${params.color2[2]})`) }
+        },
+        fragmentShader: fragmentShader
+      });
+
+      plane = new THREE.Mesh(geometry, material);
+      scene.add(plane);
+
+      // GUI Setup
+      gui = new dat.GUI();
+      gui.add(params, 'distortionAmount', 0.0, 2.0).onChange(value => {
+        material.uniforms.distortionAmount.value = value;
+      });
+      gui.add(params, 'gradientSpeed', 0.0, 5.0).onChange(value => {
+        material.uniforms.gradientSpeed.value = value;
+      });
+      gui.add(params, 'distortionFrequency', 0.1, 5.0).onChange(value => {
+        material.uniforms.distortionFrequency.value = value;
+      });
+      gui.add(params, 'colorBlendIntensity', 0.0, 1.0).onChange(value => {
+        material.uniforms.colorBlendIntensity.value = value;
+      });
+      gui.add(params, 'warpIntensity', 0.0, 1.0).onChange(value => {
+        material.uniforms.warpIntensity.value = value;
+      });
+      gui.add(params, 'blackHoleStrength', 0.0, 2.0).onChange(value => { // Controls the black hole effect intensity
+        material.uniforms.blackHoleStrength.value = value;
+      });
+      gui.add(params, 'focalX', 0.0, 1.0).onChange(value => {
+        material.uniforms.focalPoint.value.x = value;
+      });
+      gui.add(params, 'focalY', 0.0, 1.0).onChange(value => {
+        material.uniforms.focalPoint.value.y = value;
+      });
+      gui.add(params, 'hueShift', -180.0, 180.0).onChange(value => {
+        material.uniforms.hueShift.value = value;
+      });
+      gui.addColor(params, 'color1').onChange(value => {
+        material.uniforms.color1.value.set(`rgb(${value[0]}, ${value[1]}, ${value[2]})`);
+      });
+      gui.addColor(params, 'color2').onChange(value => {
+        material.uniforms.color2.value.set(`rgb(${value[0]}, ${value[1]}, ${value[2]})`);
+      });
+
+      window.addEventListener('resize', onWindowResize, false);
+
+      animate();
+    }
+
+    function onWindowResize() {
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      material.uniforms.resolution.value.set(window.innerWidth, window.innerHeight);
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+
+    init();
+  </script>
+</body>
+</html>
