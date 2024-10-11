@@ -6,9 +6,38 @@
   <style>
     body { margin: 0; overflow: hidden; }
     canvas { display: block; }
+    #controls {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      gap: 10px;
+    }
+    button, label {
+      padding: 10px 20px;
+      background-color: #008CBA;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover, label:hover {
+      background-color: #005f6b;
+    }
+    input[type="file"] {
+      display: none;
+    }
   </style>
 </head>
 <body>
+  <div id="controls">
+    <button id="downloadButton">Download as Image</button>
+    <button id="exportButton">Export Settings</button>
+    <label for="importButton">Import Settings</label>
+    <input type="file" id="importButton" />
+  </div>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.6/dat.gui.min.js"></script>
   <script id="fragmentShader" type="x-shader/x-fragment">
@@ -73,9 +102,9 @@
       distortionFrequency: 1.0,
       colorBlendIntensity: 0.5,
       warpIntensity: 0.2,
-      blackHoleStrength: 0.5,  // Controls the intensity of the black hole effect
-      focalX: 0.5,  // Focal point X coordinate in normalized space
-      focalY: 0.5,  // Focal point Y coordinate in normalized space
+      blackHoleStrength: 0.5,
+      focalX: 0.5,
+      focalY: 0.5,
       hueShift: 0.0,
       color1: [255, 0, 128],
       color2: [0, 128, 255],
@@ -131,7 +160,7 @@
       gui.add(params, 'warpIntensity', 0.0, 1.0).onChange(value => {
         material.uniforms.warpIntensity.value = value;
       });
-      gui.add(params, 'blackHoleStrength', 0.0, 2.0).onChange(value => { // Controls the black hole effect intensity
+      gui.add(params, 'blackHoleStrength', 0.0, 2.0).onChange(value => {
         material.uniforms.blackHoleStrength.value = value;
       });
       gui.add(params, 'focalX', 0.0, 1.0).onChange(value => {
@@ -150,9 +179,70 @@
         material.uniforms.color2.value.set(`rgb(${value[0]}, ${value[1]}, ${value[2]})`);
       });
 
+      // Add button event listeners
+      document.getElementById('downloadButton').addEventListener('click', downloadImage);
+      document.getElementById('exportButton').addEventListener('click', exportSettings);
+      document.getElementById('importButton').addEventListener('change', importSettings);
+
       window.addEventListener('resize', onWindowResize, false);
 
       animate();
+    }
+
+    function downloadImage() {
+      // Render the scene
+      renderer.render(scene, camera);
+
+      // Get the WebGL canvas
+      const canvas = renderer.domElement;
+
+      // Create a temporary canvas to draw the WebGL content
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = canvas.width;
+      tempCanvas.height = canvas.height;
+      const ctx = tempCanvas.getContext('2d');
+
+      // Draw the WebGL canvas content onto the temporary canvas
+      ctx.drawImage(canvas, 0, 0);
+
+      // Get the image data URL from the temporary canvas
+      const dataURL = tempCanvas.toDataURL('image/png');
+
+      // Create and trigger the download
+      const link = document.createElement('a');
+      link.href = dataURL;
+      link.download = 'gradient_image.png';
+      link.click();
+    }
+
+    function exportSettings() {
+      const settingsJSON = JSON.stringify(params);
+      const blob = new Blob([settingsJSON], { type: 'application/json' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'settings.json';
+      link.click();
+    }
+
+    function importSettings(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const importedSettings = JSON.parse(e.target.result);
+          Object.assign(params, importedSettings);
+          for (let key in importedSettings) {
+            if (gui.__controllers) {
+              gui.__controllers.forEach(controller => {
+                if (controller.property === key) {
+                  controller.setValue(importedSettings[key]);
+                }
+              });
+            }
+          }
+        };
+        reader.readAsText(file);
+      }
     }
 
     function onWindowResize() {
