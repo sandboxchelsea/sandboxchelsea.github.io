@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>4-Cut Photo Booth</title>
+  <style>
+    body {
+      background-color: #ffffff;
+      text-align: center;
+      font-family: Arial, sans-serif;
+    }
+    #video {
+      width: 640px;
+      height: 480px;
+      background-color: #ccc;
+      transform: scaleX(-1); /* Mirror the video feed horizontally */
+    }
+    .indicator {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      margin: 5px;
+      border-radius: 50%;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+    .indicator.active {
+      background-color: rgba(0, 0, 0, 1);
+    }
+    #result-container {
+      display: none;
+    }
+    #result-image {
+      margin-top: 20px;
+      max-width: 90%;
+      box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.2);
+    }
+    #download-btn, #reset-btn {
+      margin: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    p {
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Photo Booth Screen -->
+  <div id="photo-booth">
+    <video id="video" autoplay></video>
+    <div id="indicators">
+      <div class="indicator" id="indicator1"></div>
+      <div class="indicator" id="indicator2"></div>
+      <div class="indicator" id="indicator3"></div>
+      <div class="indicator" id="indicator4"></div>
+    </div>
+    <p>Press the <strong>spacebar</strong> to take a picture.</p>
+  </div>
+
+  <!-- Result Screen -->
+  <div id="result-container">
+    <img id="result-image" src="" alt="Your Photo Booth Result">
+    <br>
+    <button id="download-btn">Download</button>
+    <button id="reset-btn">Reset</button>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
