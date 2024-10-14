@@ -154,8 +154,8 @@ function addPresetText(ctx, width, height) {
   ctx.textBaseline = 'bottom';
   
   // Split the text into two lines
-  const line1 = '20241012';
-  const line2 = 'Minhee, Minjeong, Youjin, Betty, Chanwoo';
+  const line1 = '20241014';
+  const line2 = 'at Understudy, National Theatre';
   
   // Position the text 20px from the right and bottom
   ctx.fillText(line1, width - 20, height - 40); // Year on top
