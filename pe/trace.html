@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cursor Tracing Website with Image Stamp</title>
+    <title>Video Frame Cursor</title>
     <style>
         body {
             margin: 0;
@@ -13,8 +13,8 @@
         #cursor {
             position: fixed;
             pointer-events: none;
-            max-width: 48px;
-            max-height: 48px;
+            max-width: 96px;
+            max-height: 96px;
             width: auto;
             height: auto;
         }
@@ -23,42 +23,76 @@
             top: 0;
             left: 0;
         }
+        #clearButton {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #videoSource {
+            display: none;
+        }
     </style>
 </head>
 <body>
-    <img id="cursor" src="c.png" alt="Custom Cursor">
+    <canvas id="cursor"></canvas>
     <canvas id="canvas"></canvas>
+    <button id="clearButton">Clear Canvas</button>
+    <video id="videoSource" src="cc.mp4" loop></video>
 
     <script>
         const cursor = document.getElementById('cursor');
+        const cursorCtx = cursor.getContext('2d');
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
+        const video = document.getElementById('videoSource');
         let isDrawing = false;
+        let currentFrame = 0;
 
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
+            cursor.width = 48;
+            cursor.height = 48;
         }
 
         function updateCursorPosition(e) {
-            const rect = cursor.getBoundingClientRect();
-            cursor.style.left = `${e.clientX - rect.width / 2}px`;
-            cursor.style.top = `${e.clientY - rect.height / 2}px`;
+            cursor.style.left = `${e.clientX - cursor.width / 2}px`;
+            cursor.style.top = `${e.clientY - cursor.height / 2}px`;
         }
 
         function startDrawing(e) {
             isDrawing = true;
+            video.play();
             draw(e);
         }
 
         function stopDrawing() {
             isDrawing = false;
+            video.pause();
         }
 
         function draw(e) {
             if (!isDrawing) return;
-            const rect = cursor.getBoundingClientRect();
-            ctx.drawImage(cursor, e.clientX - rect.width / 2, e.clientY - rect.height / 2, rect.width, rect.height);
+            ctx.drawImage(cursor, e.clientX - cursor.width / 2, e.clientY - cursor.height / 2);
+        }
+
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function updateCursorFrame() {
+            if (isDrawing) {
+                cursorCtx.drawImage(video, 0, 0, cursor.width, cursor.height);
+                currentFrame = (currentFrame + 1) % Math.floor(video.duration * 30); // Assuming 30 fps
+                video.currentTime = currentFrame / 30;
+            }
+            requestAnimationFrame(updateCursorFrame);
         }
 
         window.addEventListener('resize', resizeCanvas);
@@ -66,11 +100,12 @@
         document.addEventListener('mousedown', startDrawing);
         document.addEventListener('mouseup', stopDrawing);
         document.addEventListener('mousemove', draw);
+        document.getElementById('clearButton').addEventListener('click', clearCanvas);
 
-        // Wait for the image to load before setting up the canvas
-        cursor.onload = function() {
+        video.addEventListener('loadedmetadata', () => {
             resizeCanvas();
-        };
+            updateCursorFrame();
+        });
     </script>
 </body>
 </html>
