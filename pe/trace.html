@@ -17,6 +17,7 @@
             max-height: 96px;
             width: auto;
             height: auto;
+            display: none; /* Hide cursor initially */
         }
         #canvas {
             position: fixed;
@@ -53,12 +54,22 @@
         const video = document.getElementById('videoSource');
         let isDrawing = false;
         let currentFrame = 0;
+        let thumbnailLoaded = false;
 
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
-            cursor.width = 48;
-            cursor.height = 48;
+            
+            // Calculate cursor size while maintaining aspect ratio
+            const maxSize = 48;
+            const aspectRatio = video.videoWidth / video.videoHeight;
+            if (aspectRatio > 1) {
+                cursor.width = maxSize;
+                cursor.height = maxSize / aspectRatio;
+            } else {
+                cursor.width = maxSize * aspectRatio;
+                cursor.height = maxSize;
+            }
         }
 
         function updateCursorPosition(e) {
@@ -87,12 +98,25 @@
         }
 
         function updateCursorFrame() {
+            if (!thumbnailLoaded) {
+                video.currentTime = 0;
+                video.pause();
+                drawVideoFrame();
+                thumbnailLoaded = true;
+                cursor.style.display = 'block'; // Show cursor after thumbnail is loaded
+            }
+
             if (isDrawing) {
-                cursorCtx.drawImage(video, 0, 0, cursor.width, cursor.height);
+                drawVideoFrame();
                 currentFrame = (currentFrame + 1) % Math.floor(video.duration * 30); // Assuming 30 fps
                 video.currentTime = currentFrame / 30;
             }
             requestAnimationFrame(updateCursorFrame);
+        }
+
+        function drawVideoFrame() {
+            cursorCtx.clearRect(0, 0, cursor.width, cursor.height);
+            cursorCtx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight, 0, 0, cursor.width, cursor.height);
         }
 
         window.addEventListener('resize', resizeCanvas);

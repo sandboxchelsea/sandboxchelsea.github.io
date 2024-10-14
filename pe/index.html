@@ -3,49 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Positional Encoding Visualization Portal</title>
+    <title>12L Visualisations</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             line-height: 1.6;
-            color: #333;
+            margin: 0;
+            padding: 20px;
             max-width: 800px;
             margin: 0 auto;
-            padding: 20px;
         }
         h1 {
-            color: #2c3e50;
+            color: #333;
             text-align: center;
         }
         ul {
             list-style-type: none;
             padding: 0;
         }
-        li {
-            margin-bottom: 10px;
-        }
-        a {
+        .thumbnail-link {
             display: block;
-            padding: 10px 15px;
-            background-color: #474747;
-            color: #fff;
+            margin-bottom: 30px;
             text-decoration: none;
-            border-radius: 8px;
-            transition: background-color 0.3s ease;
+            color: #333;
         }
-        a:hover {
-            background-color: #2e2e2e;
+        .thumbnail {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .thumbnail-title {
+            margin-top: 10px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .thumbnail-link:hover .thumbnail-title {
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
-    <h1>Positional Encoding Visualization Portal</h1>
+    <h1>12L Visualisations</h1>
     <ul>
-        <li><a href="2d.html">PE Visualisation 2D</a></li>
-        <li><a href="3d.html">PE Visualization 3D</a></li>
-        <li><a href="vs.html">Vector Space Visualization</a></li>
-        <li><a href="slitscan.html">Video Slitscan Generator</a></li>
-        <li><a href="spectrogram.html">Gradient Generator</a></li>
+        <li>
+            <a href="2d.html" class="thumbnail-link">
+                <img src="resources/2d.png" alt="PE Visualisation 2D" class="thumbnail">
+                <div class="thumbnail-title">PE Visualisation 2D</div>
+            </a>
+        </li>
+        <li>
+            <a href="3d.html" class="thumbnail-link">
+                <img src="resources/3d.png" alt="PE Visualization 3D" class="thumbnail">
+                <div class="thumbnail-title">PE Visualization 3D</div>
+            </a>
+        </li>
+        <li>
+            <a href="vs.html" class="thumbnail-link">
+                <img src="resources/vs.png" alt="Vector Space Visualization" class="thumbnail">
+                <div class="thumbnail-title">Vector Space Visualization</div>
+            </a>
+        </li>
+        <li>
+            <a href="slitscan.html" class="thumbnail-link">
+                <img src="resources/slitscan.png" alt="Video Slitscan Generator" class="thumbnail">
+                <div class="thumbnail-title">Video Slitscan Generator</div>
+            </a>
+        </li>
+        <li>
+            <a href="spectrogram.html" class="thumbnail-link">
+                <img src="resources/spectrogram.jpg" alt="Gradient Generator" class="thumbnail">
+                <div class="thumbnail-title">Gradient Generator</div>
+            </a>
+        </li>
+        <li>
+            <a href="trace.html" class="thumbnail-link">
+                <img src="resources/trace.png" alt="Trace" class="thumbnail">
+                <div class="thumbnail-title">Trace</div>
+            </a>
+        </li>
     </ul>
 </body>
 </html>
