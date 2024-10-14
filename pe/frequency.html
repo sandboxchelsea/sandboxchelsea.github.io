@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Triple-Frequency Unit Circle Demonstration with Sine Waves (1x, 2x, 4x)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        #controls {
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+        }
+        #angleSlider {
+            margin: 0 10px;
+        }
+        #playButton {
+            margin-right: 10px;
+            padding: 5px 10px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    <div id="controls">
+        <button id="playButton">Pause</button>
+        <input type="range" id="angleSlider" min="0" max="360" value="0">
+        <label for="angleSlider">Angle: <span id="angleValue">0</span>°</label>
+    </div>
+    <script>
+        let circleX = 120;
+        let circleY = 150;
+        let circleRadius = 70;
+        let graphX = 50;
+        let graphY = 380;
+        let graphAmplitude = 50;
+        let graphPeriod = 600;
+        let angle = 0;
+        let angleSlider;
+        let playButton;
+        let isPlaying = true;
+        let frequencyMid = 2;
+        let frequencyHigh = 4;
+
+        function setup() {
+            let canvas = createCanvas(700, 450);
+            canvas.parent('canvas-container');
+            angleMode(DEGREES);
+            describe(
+                'Interactive demonstration of three unit circles with frequencies 1x, 2x, and 4x, showing corresponding sine values moving along a combined graph.'
+            );
+
+            angleSlider = document.getElementById('angleSlider');
+            angleSlider.addEventListener('input', updateAngle);
+
+            playButton = document.getElementById('playButton');
+            playButton.addEventListener('click', togglePlay);
+        }
+
+        function updateAngle() {
+            angle = parseInt(angleSlider.value);
+            document.getElementById('angleValue').textContent = angle;
+        }
+
+        function togglePlay() {
+            isPlaying = !isPlaying;
+            playButton.textContent = isPlaying ? 'Pause' : 'Play';
+        }
+
+        function draw() {
+            background(0);
+
+            // Update angle if playing
+            if (isPlaying) {
+                angle = (angle + 1) % 360;
+                angleSlider.value = angle;
+                document.getElementById('angleValue').textContent = angle;
+            }
+
+            // Display current angle value
+            fill(255);
+            textSize(20);
+            textAlign(LEFT, CENTER);
+            text(`angle: ${angle}°`, 25, 25);
+
+            // Draw circles
+            drawCircle(circleX, circleY, circleRadius, angle, 1, '1x', 'red');
+            drawCircle(circleX + 230, circleY, circleRadius, angle, frequencyMid, '2x', 'green');
+            drawCircle(circleX + 460, circleY, circleRadius, angle, frequencyHigh, '4x', 'blue');
+
+            // Draw combined graph
+            drawCombinedGraph();
+        }
+
+        function drawCircle(cx, cy, cr, a, freq, label, sinColor) {
+            // Draw circle and diameters
+            noFill();
+            stroke(128);
+            strokeWeight(2);
+            circle(cx, cy, 2 * cr);
+            line(cx, cy - cr, cx, cy + cr);
+            line(cx - cr, cy, cx + cr, cy);
+
+            // Draw moving points on circle
+            let pointX = cx + cr * cos(a * freq);
+            let pointY = cy - cr * sin(a * freq);
+            line(cx, cy, pointX, pointY);
+            noStroke();
+            fill('white');
+            circle(pointX, pointY, 8);
+            fill(sinColor);
+            circle(cx, pointY, 8);
+
+            // Add label
+            fill('white');
+            textAlign(CENTER, CENTER);
+            textSize(16);
+            text(label, cx, cy - cr - 20);
+        }
+
+        function drawCombinedGraph() {
+            // Draw graph axes
+            stroke('grey');
+            strokeWeight(2);
+            line(graphX, graphY, graphX + graphPeriod, graphY);
+            line(graphX, graphY - graphAmplitude, graphX, graphY + graphAmplitude);
+            line(graphX + graphPeriod, graphY - graphAmplitude, graphX + graphPeriod, graphY + graphAmplitude);
+
+            // Draw labels
+            fill('grey');
+            strokeWeight(1);
+            textAlign(CENTER, CENTER);
+            textSize(12);
+            text('0', graphX, graphY + graphAmplitude + 15);
+            text('360', graphX + graphPeriod, graphY + graphAmplitude + 15);
+            text('1', graphX - 15, graphY - graphAmplitude);
+            text('0', graphX - 15, graphY);
+            text('-1', graphX - 15, graphY + graphAmplitude);
+
+            // Draw legend
+            textAlign(LEFT, CENTER);
+            fill('red');
+            text('sin (1x)', graphX + graphPeriod + 10, graphY - 30);
+            fill('green');
+            text('sin (2x)', graphX + graphPeriod + 10, graphY);
+            fill('blue');
+            text('sin (4x)', graphX + graphPeriod + 10, graphY + 30);
+
+            // Draw curves
+            drawCurve('red', 1, Math.sin);
+            drawCurve('green', frequencyMid, Math.sin);
+            drawCurve('blue', frequencyHigh, Math.sin);
+
+            // Draw moving line and points
+            let lineX = map(angle, 0, 360, graphX, graphX + graphPeriod);
+            stroke('grey');
+            line(lineX, graphY - graphAmplitude, lineX, graphY + graphAmplitude);
+
+            drawPoint('red', 1, Math.sin);
+            drawPoint('green', frequencyMid, Math.sin);
+            drawPoint('blue', frequencyHigh, Math.sin);
+        }
+
+        function drawCurve(color, freq, func) {
+            noFill();
+            stroke(color);
+            beginShape();
+            for (let t = 0; t <= 360; t++) {
+                let x = map(t, 0, 360, graphX, graphX + graphPeriod);
+                let y = graphY - graphAmplitude * func(radians(t * freq));
+                vertex(x, y);
+            }
+            endShape();
+        }
+
+        function drawPoint(color, freq, func) {
+            let x = map(angle, 0, 360, graphX, graphX + graphPeriod);
+            let y = graphY - graphAmplitude * func(radians(angle * freq));
+            noStroke();
+            fill(color);
+            circle(x, y, 8);
+        }
+    </script>
+</body>
+</html>
