@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cursor Tracing Website with Image Stamp</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            cursor: none;
+        }
+        #cursor {
+            position: fixed;
+            pointer-events: none;
+            max-width: 48px;
+            max-height: 48px;
+            width: auto;
+            height: auto;
+        }
+        #canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+    </style>
+</head>
+<body>
+    <img id="cursor" src="c.png" alt="Custom Cursor">
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const cursor = document.getElementById('cursor');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        function updateCursorPosition(e) {
+            const rect = cursor.getBoundingClientRect();
+            cursor.style.left = `${e.clientX - rect.width / 2}px`;
+            cursor.style.top = `${e.clientY - rect.height / 2}px`;
+        }
+
+        function startDrawing(e) {
+            isDrawing = true;
+            draw(e);
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            const rect = cursor.getBoundingClientRect();
+            ctx.drawImage(cursor, e.clientX - rect.width / 2, e.clientY - rect.height / 2, rect.width, rect.height);
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        document.addEventListener('mousemove', updateCursorPosition);
+        document.addEventListener('mousedown', startDrawing);
+        document.addEventListener('mouseup', stopDrawing);
+        document.addEventListener('mousemove', draw);
+
+        // Wait for the image to load before setting up the canvas
+        cursor.onload = function() {
+            resizeCanvas();
+        };
+    </script>
+</body>
+</html>
