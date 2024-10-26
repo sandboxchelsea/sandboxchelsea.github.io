@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro", sans-serif;
+            user-select: none;
+        }
+
+        body {
+            margin: 0;
+            background: #ffffff;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+        }
+
+        .draggable {
+            position: absolute;
+            cursor: move;
+            touch-action: none;
+        }
+
+        /* Menu Component Styles */
+        .menu-container {
+            width: 177px;
+            position: absolute;
+            cursor: move;
+            left: 100px; /* Adjust as needed */
+            top: 100px;  /* Adjust as needed */
+            /* Removed transform: translate(-50%, -50%); */
+            background: #F2F2F2; /* Updated background color */
+        }
+
+        .background-blob {
+            width: 177px;
+            height: 130px;
+            background: #F2F2F2;
+            border-radius: 65px;
+            position: absolute;
+            transition: all 0.3s ease;
+        }
+
+        .background-blob.expanded {
+            height: 156px;
+            border-radius: 60px;
+        }
+
+        .menu-items {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .black-bg {
+            width: 161px;
+            height: 38px;
+            background: black;
+            border-radius: 225.74px;
+            position: absolute;
+            left: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .menu-item {
+            position: absolute;
+            left: 8px;
+            width: 161px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            z-index: 1;
+            margin: 0;
+            padding: 0;
+            transform: translateY(-5px); /* Moves the menu items 5px upward */
+        }
+
+        .menu-text {
+            color: rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease;
+            font-size: 16px;
+            font-weight: 400;
+            line-height: 24px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: -4px;
+        }
+
+        .menu-item.selected .menu-text {
+            color: white;
+        }
+
+        /* State-specific positions */
+        .state-search #generate { top: 14px; }
+        .state-search #search { top: 53px; }
+        .state-search #classify { top: 92px; }
+
+        .state-generate #generate { top: 53px; }
+        .state-generate #search { top: 92px; }
+        .state-generate #classify { top: 124px; }
+
+        .state-classify #generate { top: 8px; }
+        .state-classify #search { top: 40px; }
+        .state-classify #classify { top: 79px; }
+
+        .menu-item .icon {
+            display: none;
+            margin-right: 4px;
+        }
+
+        .menu-item.selected .icon {
+            display: inline;
+        }
+
+        .menu-item:not(.selected) .menu-text {
+            transform: translateX(3px);
+        }
+
+        .menu-item.selected .menu-text {
+            transform: translateX(0px);
+        }
+
+        /* Selector Component Styles */
+        .selector-container {
+            width: 337px;
+            height: 78px;
+            background: #F2F2F2; /* Updated background color */
+            border-radius: 100px;
+            position: absolute;
+            padding: 8px;
+            left: 60%;
+            top: 30%;
+        }
+
+        .selector-button {
+            height: 24px;
+            padding: 5px 8px;
+            background: #C8C8C8;
+            border-radius: 100px;
+            color: black;
+            font-size: 14px;
+            font-weight: 400;
+            line-height: 14.7px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s ease;
+            position: absolute;
+        }
+
+        .selector-button.large {
+            height: 62px;
+            background: black;
+            color: white;
+        }
+
+        #visual {
+            width: 56px;
+            left: 8px;
+            top: 27px;
+        }
+
+        #visual.large {
+            top: 8px;
+        }
+
+        #conversation {
+            width: 103px;
+            left: 68px;
+            top: 27px;
+        }
+
+        #conversation.large {
+            top: 8px;
+        }
+
+        #textInVideo {
+            width: 101px;
+            left: 175px;
+            top: 27px;
+        }
+
+        #textInVideo.large {
+            top: 8px;
+        }
+
+        #logo {
+            width: 49px;
+            left: 280px;
+            top: 27px;
+        }
+
+        #logo.large {
+            top: 8px;
+        }
+
+        /* Slider Component Styles */
+        .slider-container {
+            width: 337px;
+            height: 78px;
+            background: #F2F2F2; /* Updated background color */
+            border-radius: 100px;
+            position: absolute;
+            left: 60%;
+            top: 60%;
+        }
+
+        .slider-track-container {
+            width: 313px;
+            height: 4px;
+            position: absolute;
+            left: 12px;
+            top: 37px;
+        }
+
+        .slider-track {
+            width: 100%;
+            height: 100%;
+            background: black;
+            border-radius: 100px;
+            position: relative;
+        }
+
+        .slider-handle {
+            width: auto;
+            min-width: 44px;
+            height: 44px;
+            padding: 5px 10px;
+            background: black;
+            border-radius: 100px;
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+            line-height: 14.7px;
+            user-select: none;
+        }
+
+        .min-value, .max-value {
+            position: absolute;
+            background: black;
+            color: white;
+            border-radius: 100px;
+            font-size: 14px;
+            line-height: 14.7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+        }
+
+        .min-value {
+            left: 0;
+            top: -8px;
+            height: 20px;
+            padding: 5px 2px;
+            min-width: 35px;
+        }
+
+        .max-value {
+            right: 0;
+            top: -24px;
+            height: 52px;
+            width: 30px;
+            padding: 5px 2px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Menu Component -->
+    <div class="menu-container draggable">
+        <div class="background-blob"></div>
+        <div class="menu-items">
+            <div class="black-bg"></div>
+            <div id="generate" class="menu-item">
+                <span class="menu-text"><span class="icon">􀌲</span>Generate</span>
+            </div>
+            <div id="search" class="menu-item">
+                <span class="menu-text"><span class="icon">􀊫</span>Search</span>
+            </div>
+            <div id="classify" class="menu-item">
+                <span class="menu-text"><span class="icon">􀬎</span>Classify</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Selector Component -->
+    <div class="selector-container draggable">
+        <button id="visual" class="selector-button">Visual</button>
+        <button id="conversation" class="selector-button">Conversation</button>
+        <button id="textInVideo" class="selector-button">Text in Video</button>
+        <button id="logo" class="selector-button">Logo</button>
+    </div>
+
+    <!-- Slider Component -->
+    <div class="slider-container draggable">
+        <div class="slider-track-container">
+            <div class="slider-track">
+                <div class="min-value">0.01</div>
+                <div class="max-value">1</div>
+                <div class="slider-handle">0.78</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Menu Component Functionality
+        const container = document.querySelector('.menu-container');
+        const menuItems = document.querySelectorAll('.menu-item');
+        const backgroundBlob = document.querySelector('.background-blob');
+        const blackBg = document.querySelector('.black-bg');
+
+        function updateState(selectedId) {
+            container.classList.remove('state-search', 'state-generate', 'state-classify');
+            container.classList.add(`state-${selectedId}`);
+            
+            menuItems.forEach(item => {
+                item.classList.remove('selected');
+                if (item.id === selectedId) {
+                    item.classList.add('selected');
+                }
+            });
+
+            if (selectedId === 'search') {
+                backgroundBlob.classList.remove('expanded');
+                blackBg.style.top = '46px';
+            } else if (selectedId === 'generate') {
+                backgroundBlob.classList.add('expanded');
+                blackBg.style.top = '46px';
+            } else {
+                backgroundBlob.classList.add('expanded');
+                blackBg.style.top = '72px';
+            }
+        }
+
+        menuItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.stopPropagation();
+                updateState(item.id);
+            });
+        });
+
+        // Selector functionality
+        const buttons = document.querySelectorAll('.selector-button');
+        buttons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.stopPropagation();
+                button.classList.toggle('large');
+            });
+        });
+
+        // Dragging functionality for all components
+        const draggables = document.querySelectorAll('.draggable');
+        let activeComponent = null;
+        let initialX = 0;
+        let initialY = 0;
+        let currentX = 0;
+        let currentY = 0;
+
+        draggables.forEach(component => {
+            component.addEventListener('mousedown', dragStart);
+        });
+
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', dragEnd);
+
+        function dragStart(e) {
+            if (e.target === sliderHandle) return;
+            
+            activeComponent = this;
+            const rect = activeComponent.getBoundingClientRect();
+            
+            // Calculate the offset from the mouse position to the top-left corner of the element
+            initialX = e.clientX - rect.left;
+            initialY = e.clientY - rect.top;
+            
+            // Store the current position of the element
+            currentX = rect.left;
+            currentY = rect.top;
+            
+            activeComponent.style.cursor = 'move';
+        }
+
+        function drag(e) {
+            if (activeComponent) {
+                e.preventDefault();
+                
+                // Calculate the new position based on the mouse movement and initial offset
+                const newX = e.clientX - initialX;
+                const newY = e.clientY - initialY;
+
+                // Update the position
+                activeComponent.style.left = newX + 'px';
+                activeComponent.style.top = newY + 'px';
+
+                // Update current position
+                currentX = newX;
+                currentY = newY;
+            }
+            
+            if (isDraggingSlider) {
+                updateSliderPosition(e);
+            }
+        }
+
+        function dragEnd() {
+            if (activeComponent) {
+                activeComponent.style.cursor = 'move';
+            }
+            activeComponent = null;
+        }
+
+        // Slider handle functionality
+        const sliderHandle = document.querySelector('.slider-handle');
+        const sliderTrackContainer = document.querySelector('.slider-track-container');
+        let isDraggingSlider = false;
+
+        function updateSliderPosition(e) {
+            const rect = sliderTrackContainer.getBoundingClientRect();
+            const minX = 0;
+            const maxX = rect.width;
+            let x = Math.max(minX, Math.min(e.clientX - rect.left, maxX));
+            
+            const percentage = x / rect.width;
+            const value = Math.max(0.01, Math.min(1, (0.01 + percentage * 0.99))).toFixed(2);
+            
+            x = ((parseFloat(value) - 0.01) / 0.99) * rect.width;
+            
+            sliderHandle.style.left = `${x}px`;
+            sliderHandle.textContent = value;
+
+            const heightPercentage = (parseFloat(value) - 0.01) / 0.99;
+            const height = 20 + (heightPercentage * 32);
+            sliderHandle.style.height = `${height}px`;
+        }
+
+        sliderHandle.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+            isDraggingSlider = true;
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDraggingSlider = false;
+        });
+
+        // Initial states
+        updateState('search');
+        
+        window.addEventListener('load', () => {
+            const percentage = (0.78 - 0.01) / 0.99;
+            const x = percentage * sliderTrackContainer.offsetWidth;
+            sliderHandle.style.left = `${x}px`;
+            
+            const height = 20 + (percentage * 32);
+            sliderHandle.style.height = `${height}px`;
+        });
+    </script>
+</body>
+</html>
