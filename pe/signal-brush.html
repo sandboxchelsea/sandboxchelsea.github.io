@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        /* Previous styles remain the same */
+        body {
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            height: 100vh;
+            background: #f0f0f0;
+        }
+
+        canvas {
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            cursor: crosshair;
+        }
+
+        .controls {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            width: 200px;
+            transition: transform 0.3s ease;
+            z-index: 100;
+        }
+
+        .controls.hidden {
+            transform: translateX(-220px);
+        }
+
+        .toggle-button {
+            position: absolute;
+            right: -40px;
+            top: 0;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 0 4px 4px 0;
+            padding: 8px;
+            cursor: pointer;
+            height: 40px;
+            width: 40px;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s ease;
+        }
+
+        .toggle-button:hover {
+            background: #45a049;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-family: Arial, sans-serif;
+            color: #333;
+        }
+
+        button {
+            margin: 5px;
+            padding: 8px 16px;
+            border: none;
+            background: #4CAF50;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            width: calc(100% - 10px);
+            transition: background 0.3s ease;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin: 8px 0;
+        }
+
+        input[type="color"] {
+            width: 100%;
+            height: 30px;
+            border: none;
+            border-radius: 4px;
+            padding: 0;
+            margin: 8px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <button class="toggle-button">☰</button>
+        <div class="control-group">
+            <label>Brush Color</label>
+            <input type="color" id="colorPicker" value="#000000">
+        </div>
+        <div class="control-group">
+            <label>Number of Particles: <span id="particleCountValue">100</span></label>
+            <input type="range" id="particleCount" min="20" max="300" value="100">
+        </div>
+        <div class="control-group">
+            <label>Brush Size: <span id="brushSizeValue">60</span></label>
+            <input type="range" id="brushSize" min="20" max="150" value="60">
+        </div>
+        <div class="control-group">
+            <label>Min Particle Size: <span id="minSizeValue">2</span></label>
+            <input type="range" id="minSize" min="1" max="5" step="0.5" value="2">
+        </div>
+        <div class="control-group">
+            <label>Max Particle Size: <span id="maxSizeValue">4</span></label>
+            <input type="range" id="maxSize" min="2" max="8" step="0.5" value="4">
+        </div>
+        <div class="control-group">
+            <label>Speed: <span id="speedValue">1</span></label>
+            <input type="range" id="speed" min="0.1" max="3" step="0.1" value="1">
+        </div>
+        <button onclick="clearCanvas()">Clear Canvas</button>
+        <button onclick="randomizeColors()">Randomize Colors</button>
+    </div>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const controls = document.querySelector('.controls');
+        const toggleButton = document.querySelector('.toggle-button');
+        let isControlsVisible = true;
+
+        toggleButton.addEventListener('click', () => {
+            isControlsVisible = !isControlsVisible;
+            controls.classList.toggle('hidden');
+            toggleButton.innerHTML = isControlsVisible ? '☰' : '→';
+        });
+        
+        const dpr = window.devicePixelRatio || 1;
+        
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            canvas.style.width = `${rect.width}px`;
+            canvas.style.height = `${rect.height}px`;
+            ctx.scale(dpr, dpr);
+        }
+        
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        let isDrawing = false;
+        let currentColor = '#000000';
+        let useRandomColors = false;
+        
+        const config = {
+            particleCount: 100,
+            brushSize: 60,
+            minSize: 2,
+            maxSize: 4,
+            speed: 1
+        };
+
+        class Particle {
+            constructor() {
+                this.reset();
+                this.size = Math.random() * (config.maxSize - config.minSize) + config.minSize;
+                this.color = currentColor;
+                this.energy = Math.random() * 0.5 + 0.5; // Energy level affects movement intensity
+                this.phase = Math.random() * Math.PI * 2; // Phase offset for oscillations
+                this.expansionFactor = Math.random() * 0.3 + 0.7; // How much the particle can expand beyond bounds
+            }
+            
+            reset() {
+                // Initial position with more variation
+                const angle = Math.random() * Math.PI * 2;
+                const radius = Math.random() * config.brushSize;
+                this.x = Math.cos(angle) * radius;
+                this.y = Math.sin(angle) * radius;
+                
+                // Movement characteristics
+                this.angle = Math.random() * Math.PI * 2;
+                this.baseVelocity = Math.random() * 2 + 1;
+                this.velocity = this.baseVelocity;
+                this.noiseOffsetX = Math.random() * 1000;
+                this.noiseOffsetY = Math.random() * 1000;
+                this.spiralFactor = Math.random() * 2 - 1; // Controls spiral direction and intensity
+                this.oscillationSpeed = Math.random() * 0.02 + 0.01;
+                
+                // Chaos parameters
+                this.chaosMode = Math.random() < 0.3; // 30% chance of chaotic behavior
+                this.chaosDuration = 0;
+                this.maxChaosDuration = Math.random() * 100 + 50;
+                
+                if (useRandomColors) {
+                    const hue = Math.random() * 360;
+                    const saturation = 70 + Math.random() * 30;
+                    const lightness = 40 + Math.random() * 20;
+                    this.color = `hsla(${hue}, ${saturation}%, ${lightness}%, 0.8)`;
+                }
+            }
+            
+            update(time) {
+                const t = time * 0.001 * config.speed;
+                
+                // Base movement patterns
+                const noiseX = Math.sin(t + this.noiseOffsetX) * Math.cos(t * 0.5);
+                const noiseY = Math.cos(t + this.noiseOffsetY) * Math.sin(t * 0.5);
+                
+                // Spiral movement
+                const spiralX = Math.cos(this.angle) * (1 + this.spiralFactor * Math.sin(t));
+                const spiralY = Math.sin(this.angle) * (1 + this.spiralFactor * Math.cos(t));
+                
+                // Oscillating velocity
+                this.velocity = this.baseVelocity * (1 + Math.sin(t * this.oscillationSpeed + this.phase));
+                
+                // Combine movements with energy factor
+                this.x += (noiseX * 3 + spiralX) * this.velocity * this.energy;
+                this.y += (noiseY * 3 + spiralY) * this.velocity * this.energy;
+                
+                // Update angle for spiral motion
+                this.angle += 0.02 * this.spiralFactor * config.speed;
+                
+                // Handle chaos mode
+                if (this.chaosMode) {
+                    this.chaosDuration++;
+                    if (this.chaosDuration > this.maxChaosDuration) {
+                        this.chaosMode = false;
+                        this.chaosDuration = 0;
+                    }
+                    
+                    // Add sudden direction changes and speed bursts
+                    if (Math.random() < 0.1) {
+                        this.angle += Math.PI * (Math.random() - 0.5);
+                        this.velocity *= (Math.random() * 2 + 1);
+                    }
+                }
+                
+                // Flexible boundary check
+                const radius = config.brushSize * this.expansionFactor;
+                const dist = Math.sqrt(this.x * this.x + this.y * this.y);
+                
+                if (dist > radius * 1.5) { // Allow particles to go 50% beyond normal bounds
+                    // Gradually pull back towards bounds
+                    const angle = Math.atan2(this.y, this.x);
+                    const pullFactor = 0.05;
+                    this.x -= Math.cos(angle) * (dist - radius) * pullFactor;
+                    this.y -= Math.sin(angle) * (dist - radius) * pullFactor;
+                    
+                    // Occasionally reset particles that go too far
+                    if (dist > radius * 2) {
+                        this.reset();
+                    }
+                }
+            }
+            
+            draw(ctx, x, y) {
+                ctx.beginPath();
+                ctx.arc(x + this.x, y + this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+            }
+        }
+
+        let particles = Array(config.particleCount).fill().map(() => new Particle());
+        let mouseX = 0;
+        let mouseY = 0;
+        let lastTime = 0;
+
+        // GUI Controls handlers remain the same
+        document.getElementById('colorPicker').addEventListener('input', (e) => {
+            currentColor = e.target.value;
+            useRandomColors = false;
+            particles.forEach(p => p.color = currentColor);
+        });
+
+        document.getElementById('particleCount').addEventListener('input', (e) => {
+            config.particleCount = parseInt(e.target.value);
+            document.getElementById('particleCountValue').textContent = config.particleCount;
+            particles = Array(config.particleCount).fill().map(() => new Particle());
+        });
+
+        document.getElementById('brushSize').addEventListener('input', (e) => {
+            config.brushSize = parseInt(e.target.value);
+            document.getElementById('brushSizeValue').textContent = config.brushSize;
+        });
+
+        document.getElementById('minSize').addEventListener('input', (e) => {
+            config.minSize = parseFloat(e.target.value);
+            document.getElementById('minSizeValue').textContent = config.minSize;
+            particles.forEach(p => p.size = Math.random() * (config.maxSize - config.minSize) + config.minSize);
+        });
+
+        document.getElementById('maxSize').addEventListener('input', (e) => {
+            config.maxSize = parseFloat(e.target.value);
+            document.getElementById('maxSizeValue').textContent = config.maxSize;
+            particles.forEach(p => p.size = Math.random() * (config.maxSize - config.minSize) + config.minSize);
+        });
+
+        document.getElementById('speed').addEventListener('input', (e) => {
+            config.speed = parseFloat(e.target.value);
+            document.getElementById('speedValue').textContent = config.speed;
+        });
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+
+        function startDrawing(e) {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            mouseX = (e.clientX - rect.left);
+            mouseY = (e.clientY - rect.top);
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            const rect = canvas.getBoundingClientRect();
+            mouseX = (e.clientX - rect.left);
+            mouseY = (e.clientY - rect.top);
+        }
+
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function randomizeColors() {
+            useRandomColors = true;
+            particles.forEach(p => {
+                const hue = Math.random() * 360;
+                const saturation = 70 + Math.random() * 30;
+                const lightness = 40 + Math.random() * 20;
+                p.color = `hsla(${hue}, ${saturation}%, ${lightness}%, 0.8)`;
+            });
+        }
+
+        function animate(time) {
+            const deltaTime = time - lastTime;
+            lastTime = time;
+
+            particles.forEach(particle => {
+                particle.update(time);
+                if (isDrawing) {
+                    particle.draw(ctx, mouseX, mouseY);
+                }
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        animate(0);
+    </script>
+</body>
+</html>
