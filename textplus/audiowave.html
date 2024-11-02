@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Voice Memo Visualizer & Transcription</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: #f0f0f0;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 800px;
+            width: 100%;
+        }
+        .visualizer-container {
+            width: 100%;
+            height: 200px;
+            position: relative;
+            overflow: hidden;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .transcription-container {
+            width: 100%;
+            height: 200px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 15px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+        canvas {
+            position: absolute;
+            right: 0;
+        }
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 20px;
+            background: #007AFF;
+            color: white;
+            cursor: pointer;
+        }
+        #timer {
+            margin-top: 10px;
+            font-size: 18px;
+            color: #333;
+        }
+        input[type="range"] {
+            width: 200px;
+        }
+        .rate-label {
+            font-size: 14px;
+            color: #666;
+            min-width: 100px;
+        }
+        #transcription {
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+        .button-container {
+            display: flex;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="visualizer-container">
+            <canvas id="waveform"></canvas>
+        </div>
+        <div class="transcription-container">
+            <div id="transcription"></div>
+        </div>
+        <div id="timer">00:00</div>
+        <div class="controls">
+            <div class="slider-container">
+                <span class="rate-label">Update Rate: 20ms</span>
+                <input type="range" id="rateSlider" min="10" max="100" value="20">
+            </div>
+            <div class="button-container">
+                <button onclick="toggleRecording()">Start Recording</button>
+                <button onclick="clearAll()">Clear</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let audioContext;
+        let analyser;
+        let dataArray;
+        let animationId;
+        let isRecording = false;
+        let recordingStartTime;
+        let waveformHistory = [];
+        let lastSampleTime = 0;
+        let sampleInterval = 20;
+        let recognition;
+
+        const canvas = document.getElementById('waveform');
+        const ctx = canvas.getContext('2d');
+        const transcriptionDiv = document.getElementById('transcription');
+        canvas.width = canvas.parentElement.clientWidth;
+        const width = canvas.width;
+        const height = canvas.height;
+        const timerElement = document.getElementById('timer');
+        const rateSlider = document.getElementById('rateSlider');
+        const rateLabel = document.querySelector('.rate-label');
+
+        const AMPLIFICATION = 3.5;
+        const MIN_AMPLITUDE = 0.5;
+        const NOISE_THRESHOLD = 2;
+        const BAR_SPACING = 3;
+        const BAR_WIDTH = 2;
+
+        // Initialize speech recognition
+        if ('webkitSpeechRecognition' in window) {
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                let finalTranscript = '';
+
+                // Get the existing final transcript from the div (excluding any interim text)
+                finalTranscript = transcriptionDiv.innerHTML.replace(/<span[^>]*>.*?<\/span>/g, '');
+
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript + '\n';
+                    } else {
+                        interimTranscript = transcript; // Just use the latest interim result
+                    }
+                }
+
+                transcriptionDiv.innerHTML = finalTranscript + '<span style="color: #666;">' + interimTranscript + '</span>';
+                transcriptionDiv.scrollTop = transcriptionDiv.scrollHeight;
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+            };
+        }
+
+        rateSlider.addEventListener('input', (e) => {
+            sampleInterval = parseInt(e.target.value);
+            rateLabel.textContent = `Update Rate: ${sampleInterval}ms`;
+        });
+
+        function updateTimer() {
+            if (!isRecording) return;
+            const elapsed = Date.now() - recordingStartTime;
+            const seconds = Math.floor((elapsed / 1000) % 60);
+            const minutes = Math.floor(elapsed / 1000 / 60);
+            timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            setTimeout(updateTimer, 1000);
+        }
+
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioContext.createMediaStreamSource(stream);
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                
+                source.connect(analyser);
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+                
+                waveformHistory = [];
+                recordingStartTime = Date.now();
+                lastSampleTime = 0;
+                updateTimer();
+                draw();
+
+                // Start speech recognition
+                if (recognition) {
+                    recognition.start();
+                }
+            } catch (error) {
+                console.error('Error starting recording:', error);
+                alert('Error accessing microphone. Please make sure you have a microphone connected and have granted permission to use it.');
+            }
+        }
+
+        function stopRecording() {
+            if (audioContext) {
+                audioContext.close();
+            }
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            if (recognition) {
+                recognition.stop();
+            }
+            timerElement.textContent = '00:00';
+        }
+
+        function clearAll() {
+            waveformHistory = [];
+            ctx.clearRect(0, 0, width, height);
+            transcriptionDiv.innerHTML = '';
+        }
+
+        function toggleRecording() {
+            const button = document.querySelector('button');
+            if (!isRecording) {
+                startRecording();
+                button.textContent = 'Stop Recording';
+                isRecording = true;
+            } else {
+                stopRecording();
+                button.textContent = 'Start Recording';
+                isRecording = false;
+            }
+        }
+
+        function draw() {
+            if (!isRecording) return;
+            animationId = requestAnimationFrame(draw);
+
+            const currentTime = Date.now();
+            if (currentTime - lastSampleTime < sampleInterval) {
+                return;
+            }
+
+            analyser.getByteTimeDomainData(dataArray);
+
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+                sum += Math.abs(dataArray[i] - 128);
+            }
+            const average = sum / dataArray.length;
+            
+            const normalizedAverage = average > NOISE_THRESHOLD ? average : MIN_AMPLITUDE;
+            waveformHistory.push(normalizedAverage);
+
+            const maxBars = Math.floor(width / (BAR_WIDTH + BAR_SPACING));
+            if (waveformHistory.length > maxBars) {
+                waveformHistory.shift();
+            }
+
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.beginPath();
+            ctx.strokeStyle = '#007AFF';
+            ctx.lineWidth = BAR_WIDTH;
+
+            waveformHistory.forEach((amplitude, index) => {
+                const x = width - (waveformHistory.length - index) * (BAR_WIDTH + BAR_SPACING);
+                let normalizedAmplitude;
+                
+                if (amplitude <= MIN_AMPLITUDE) {
+                    normalizedAmplitude = 2;
+                } else {
+                    normalizedAmplitude = (amplitude / 128) * (height / 2) * AMPLIFICATION;
+                }
+                
+                ctx.moveTo(x, height/2 - normalizedAmplitude);
+                ctx.lineTo(x, height/2 + normalizedAmplitude);
+            });
+
+            ctx.stroke();
+            lastSampleTime = currentTime;
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            canvas.width = canvas.parentElement.clientWidth;
+        });
+    </script>
+</body>
+</html>
