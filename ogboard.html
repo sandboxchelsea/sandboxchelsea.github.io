@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Online Whiteboard</title>
+  <style>
+    /* CSS Styles */
+
+    /* Whiteboard Canvas */
+    #whiteboard {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      background-color: #f5f5f5;
+      overflow: hidden;
+    }
+
+    /* Memo Styling */
+    .memo {
+      position: absolute;
+      width: 300px;
+      height: 200px;
+      background-color: #fff;
+      border: 1px solid #ccc;
+      box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+      padding: 10px;
+      font-family: monospace;
+      overflow: auto;
+      cursor: text;
+    }
+
+    .memo:focus-within {
+      border-color: #66afe9;
+      box-shadow: 0 0 8px rgba(102, 175, 233, 0.6);
+    }
+
+    .memo:focus {
+      outline: 2px solid #66afe9;
+    }
+
+    /* Settings Modal */
+    .modal {
+      display: none; /* Hidden by default */
+      position: fixed;
+      z-index: 1;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.4);
+    }
+
+    .modal-content {
+      background-color: #fefefe;
+      margin: 15% auto;
+      padding: 20px;
+      width: 300px;
+      border: 1px solid #888;
+    }
+
+    #settings-button {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+    }
+
+    #close-modal {
+      float: right;
+      font-size: 28px;
+      cursor: pointer;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 600px) {
+      .memo {
+        width: 90%;
+        height: 150px;
+      }
+
+      .modal-content {
+        width: 90%;
+      }
+    }
+
+    /* Link Preview Styling */
+    .link-preview {
+      border: 1px solid #ddd;
+      padding: 10px;
+      margin-top: 10px;
+    }
+
+    .link-preview img {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .link-preview h3 {
+      margin: 10px 0 5px;
+      font-size: 18px;
+    }
+
+    .link-preview p {
+      margin: 0;
+      font-size: 14px;
+      color: #555;
+    }
+
+    /* Visual Feedback for Dragging */
+    .dragging {
+      opacity: 0.8;
+      cursor: move;
+    }
+  </style>
+</head>
+<body>
+  <!-- Whiteboard Canvas -->
+  <div id="whiteboard" role="main"></div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="modal">
+    <div class="modal-content">
+      <span id="close-modal">&times;</span>
+      <h2>Settings</h2>
+      <label for="api-key">LinkPreview API Key:</label>
+      <input type="text" id="api-key" placeholder="Enter your API key">
+      <button id="save-api-key">Save</button>
+    </div>
+  </div>
+
+  <!-- Settings Button -->
+  <button id="settings-button">Settings</button>
+
+  <!-- Include marked.js for Markdown parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <!-- Include DOMPurify for input sanitization -->
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@2.3.4/dist/purify.min.js"></script>
+
+  <script>
+    // JavaScript Code
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const whiteboard = document.getElementById('whiteboard');
+
+      // Load saved memos from localStorage
+      loadMemos();
+
+      // Event listener for creating memos
+      whiteboard.addEventListener('dblclick', createMemo);
+
+      // Settings modal functionality
+      initSettingsModal();
+
+      // Keyboard navigation
+      initKeyboardShortcuts();
+    });
+
+    // Memo Creation
+    function createMemo(event) {
+      const memo = document.createElement('div');
+      memo.className = 'memo';
+      memo.contentEditable = true;
+      memo.setAttribute('role', 'textbox');
+      memo.setAttribute('aria-multiline', 'true');
+
+      // Position the memo at the double-click location
+      const rect = whiteboard.getBoundingClientRect();
+      memo.style.left = `${event.clientX - rect.left}px`;
+      memo.style.top = `${event.clientY - rect.top}px`;
+
+      // Add event listeners
+      memo.addEventListener('input', debounce(handleInput, 300));
+      memo.addEventListener('mousedown', startDrag);
+      memo.addEventListener('paste', handleLinkPaste);
+      memo.addEventListener('keydown', handleEnterKey);
+
+      // Append to whiteboard
+      whiteboard.appendChild(memo);
+      memo.focus();
+
+      // Save memos
+      saveMemos();
+    }
+
+    // Memo Editing with Markdown Rendering
+    function handleInput(event) {
+      const memo = event.target;
+      const content = memo.textContent;
+
+      // Sanitize input to prevent XSS
+      const sanitizedContent = DOMPurify.sanitize(content);
+
+      // Render Markdown while preserving syntax
+      const htmlContent = marked.parse(sanitizedContent, { breaks: true });
+      memo.innerHTML = htmlContent;
+
+      // Place caret at the end
+      placeCaretAtEnd(memo);
+
+      // Save changes
+      saveMemos();
+    }
+
+    function placeCaretAtEnd(element) {
+      element.focus();
+      if (typeof window.getSelection != "undefined"
+          && typeof document.createRange != "undefined") {
+        var range = document.createRange();
+        range.selectNodeContents(element);
+        range.collapse(false);
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    }
+
+    // Drag and Drop Functionality
+    let selectedMemo = null;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    function startDrag(event) {
+      if (event.target.classList.contains('memo')) {
+        selectedMemo = event.target;
+        offsetX = event.offsetX;
+        offsetY = event.offsetY;
+
+        // Visual feedback
+        selectedMemo.classList.add('dragging');
+
+        document.addEventListener('mousemove', dragMemo);
+        document.addEventListener('mouseup', stopDrag);
+      }
+    }
+
+    function dragMemo(event) {
+      if (selectedMemo) {
+        event.preventDefault();
+        const rect = whiteboard.getBoundingClientRect();
+        selectedMemo.style.left = `${event.clientX - rect.left - offsetX}px`;
+        selectedMemo.style.top = `${event.clientY - rect.top - offsetY}px`;
+      }
+    }
+
+    function stopDrag() {
+      if (selectedMemo) {
+        // Restore styles
+        selectedMemo.classList.remove('dragging');
+
+        // Remove event listeners
+        document.removeEventListener('mousemove', dragMemo);
+        document.removeEventListener('mouseup', stopDrag);
+
+        // Save new position
+        saveMemos();
+
+        selectedMemo = null;
+      }
+    }
+
+    // Handle Enter Key for New Lines
+    function handleEnterKey(event) {
+      if (event.key === 'Enter') {
+        document.execCommand('insertLineBreak');
+        event.preventDefault();
+      }
+    }
+
+    // Link Previews
+    async function handleLinkPaste(event) {
+      const clipboardData = event.clipboardData || window.clipboardData;
+      const pastedData = clipboardData.getData('Text');
+
+      // Check if the pasted data is a valid URL
+      if (isValidURL(pastedData)) {
+        event.preventDefault();
+
+        const apiKey = localStorage.getItem('linkPreviewApiKey');
+        if (!apiKey) {
+          alert('Please set your LinkPreview API key in the settings.');
+          return;
+        }
+
+        try {
+          const previewData = await fetchLinkPreview(pastedData, apiKey);
+          insertLinkPreview(previewData, event.target);
+        } catch (error) {
+          console.error('Error fetching link preview:', error);
+        }
+      }
+    }
+
+    function isValidURL(string) {
+      try {
+        new URL(string);
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    async function fetchLinkPreview(url, apiKey) {
+      const response = await fetch(`https://api.linkpreview.net/?key=${apiKey}&q=${encodeURIComponent(url)}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch link preview');
+      }
+      return response.json();
+    }
+
+    function insertLinkPreview(previewData, memo) {
+      const previewHTML = `
+        <div class="link-preview">
+          <a href="${previewData.url}" target="_blank">
+            <img src="${previewData.image}" alt="${previewData.title}">
+            <h3>${previewData.title}</h3>
+            <p>${previewData.description}</p>
+          </a>
+        </div>
+      `;
+
+      memo.innerHTML += previewHTML;
+      saveMemos();
+    }
+
+    // Settings Modal for API Key
+    function initSettingsModal() {
+      const settingsButton = document.getElementById('settings-button');
+      const modal = document.getElementById('settings-modal');
+      const closeModal = document.getElementById('close-modal');
+      const saveApiKeyButton = document.getElementById('save-api-key');
+      const apiKeyInput = document.getElementById('api-key');
+
+      // Load saved API key
+      apiKeyInput.value = localStorage.getItem('linkPreviewApiKey') || '';
+
+      settingsButton.addEventListener('click', () => {
+        modal.style.display = 'block';
+      });
+
+      closeModal.addEventListener('click', () => {
+        modal.style.display = 'none';
+      });
+
+      saveApiKeyButton.addEventListener('click', () => {
+        const apiKey = apiKeyInput.value.trim();
+        if (apiKey) {
+          localStorage.setItem('linkPreviewApiKey', apiKey);
+          alert('API key saved successfully!');
+          modal.style.display = 'none';
+        } else {
+          alert('Please enter a valid API key.');
+        }
+      });
+
+      // Close modal when clicking outside content
+      window.addEventListener('click', (event) => {
+        if (event.target == modal) {
+          modal.style.display = 'none';
+        }
+      });
+    }
+
+    // Saving and Loading Memos
+    function saveMemos() {
+      const memos = document.querySelectorAll('.memo');
+      const memoData = [];
+
+      memos.forEach(memo => {
+        memoData.push({
+          content: memo.innerHTML,
+          left: memo.style.left,
+          top: memo.style.top,
+        });
+      });
+
+      localStorage.setItem('memos', JSON.stringify(memoData));
+    }
+
+    function loadMemos() {
+      const memoData = JSON.parse(localStorage.getItem('memos')) || [];
+
+      memoData.forEach(data => {
+        const memo = document.createElement('div');
+        memo.className = 'memo';
+        memo.contentEditable = true;
+        memo.setAttribute('role', 'textbox');
+        memo.setAttribute('aria-multiline', 'true');
+        memo.style.left = data.left;
+        memo.style.top = data.top;
+        memo.innerHTML = data.content;
+
+        // Add event listeners
+        memo.addEventListener('input', debounce(handleInput, 300));
+        memo.addEventListener('mousedown', startDrag);
+        memo.addEventListener('paste', handleLinkPaste);
+        memo.addEventListener('keydown', handleEnterKey);
+
+        whiteboard.appendChild(memo);
+      });
+    }
+
+    // Debounce Function for Performance Optimization
+    function debounce(func, wait) {
+      let timeout;
+      return function (...args) {
+        const context = this;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(context, args), wait);
+      };
+    }
+
+    // Keyboard Shortcuts
+    function initKeyboardShortcuts() {
+      document.addEventListener('keydown', (event) => {
+        // Ctrl+M to create a new memo
+        if (event.ctrlKey && event.key.toLowerCase() === 'm') {
+          event.preventDefault();
+          createMemoAtCenter();
+        }
+      });
+    }
+
+    function createMemoAtCenter() {
+      const memo = document.createElement('div');
+      memo.className = 'memo';
+      memo.contentEditable = true;
+      memo.setAttribute('role', 'textbox');
+      memo.setAttribute('aria-multiline', 'true');
+
+      // Position memo at the center of the viewport
+      memo.style.left = `${window.innerWidth / 2 - 150}px`;
+      memo.style.top = `${window.innerHeight / 2 - 100}px`;
+
+      // Add event listeners
+      memo.addEventListener('input', debounce(handleInput, 300));
+      memo.addEventListener('mousedown', startDrag);
+      memo.addEventListener('paste', handleLinkPaste);
+      memo.addEventListener('keydown', handleEnterKey);
+
+      whiteboard.appendChild(memo);
+      memo.focus();
+
+      // Save memos
+      saveMemos();
+    }
+
+    // Utility Functions
+    function sanitizeHTML(str) {
+      return DOMPurify.sanitize(str);
+    }
+  </script>
+</body>
+</html>
