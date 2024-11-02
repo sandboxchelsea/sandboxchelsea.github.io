@@ -1,86 +1,636 @@
 <!DOCTYPE html>
 <html lang="en">
+<!-- Previous head and style sections remain the same -->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dynamic Text</title>
+    <title>Text+</title>
     <style>
+        /* Previous styles remain the same */
+        @import url('https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,slnt,wdth,wght,GRAD,XOPQ,XTRA,YOPQ,YTAS,YTDE,YTFI,YTLC,YTUC@8..144,-10..0,25..151,100..1000,8,138,323..603,61,649..854,-305..-98,560..788,416..570,528..760&display=swap');
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
+            font-family: system-ui, -apple-system, sans-serif;
+            padding: 2rem;
+            max-width: 1200px;
             margin: 0 auto;
-            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 2rem;
+            background-color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .controls {
             display: flex;
             flex-direction: column;
-            min-height: 100vh;
+            gap: 1rem;
         }
-        #controls {
-            margin-bottom: 20px;
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
         }
-        button {
-            padding: 10px 15px;
-            margin-right: 10px;
+
+        .control-group.master {
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background-color: #f0f7ff;
+            border-radius: 4px;
+            border: 1px solid #cce5ff;
         }
-        #status {
-            margin-bottom: 10px;
+
+        .control-group.height-related {
+            margin-left: 1rem;
+            padding-left: 1rem;
+            border-left: 2px solid #e6e6e6;
+        }
+
+        .control-group label {
+            font-size: 0.875rem;
+            color: #666;
+        }
+
+        .control-group.master label {
+            color: #0066cc;
             font-weight: bold;
         }
-        #dynamicText {
-            border: 1px solid #ccc;
-            padding: 10px;
-            flex-grow: 1;
-            overflow-y: auto;
-            margin-bottom: 20px;
+
+        .slider-container {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
         }
-        #volumeIndicator {
-            width: 120px;
-            height: 120px;
-            margin: 0 auto 20px;
+
+        .slider-container input[type="range"] {
+            flex: 1;
         }
-        #dataContainer {
-            display: none;
+
+        .slider-container span {
+            min-width: 3.5rem;
+            text-align: right;
+            font-family: monospace;
         }
-        #rawData {
+
+        .preview {
+            padding: 2rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #fff;
+        }
+
+        .preview-text {
+            font-family: "Roboto Flex", sans-serif;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .sample-text {
+            font-family: "Roboto Flex", sans-serif;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+
+        h1 {
+            margin-bottom: 2rem;
+            color: #333;
+        }
+
+        button {
+            padding: 0.5rem 1rem;
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+
+        button:hover {
+            background-color: #0052a3;
+        }
+
+        /* Add these new styles for the audio wave section */
+        .audio-section {
+            margin-top: 2rem;
+            padding: 2rem;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .visualizer-container {
             width: 100%;
             height: 200px;
+            position: relative;
+            overflow: hidden;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        #interimSpeech {
-            opacity: 0.5;
-            margin-bottom: 10px;
-            font-style: italic;
-        }
-        #dynamicText, #interimSpeech {
-            border: 1px solid #ccc;
-            padding: 10px;
-            min-height: 50px;
-            max-height: 200px;
+
+        .transcription-container {
+            width: 100%;
+            height: 200px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 15px;
+            box-sizing: border-box;
             overflow-y: auto;
+            margin-top: 20px;
+        }
+
+        canvas {
+            position: absolute;
+            right: 0;
+        }
+
+        .audio-controls {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #timer {
+            margin-top: 10px;
+            font-size: 18px;
+            color: #333;
+        }
+
+        .rate-label {
+            font-size: 14px;
+            color: #666;
+            min-width: 100px;
+        }
+
+        #transcription {
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+
+        .button-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* Add this style block to hide all controls except master height */
+        .control-group:not(.master),
+        #reset {
+            display: none;
         }
     </style>
 </head>
 <body>
-    <h1>Dynamic Text</h1>
-    
-    <div id="controls">
-        <button id="toggleBtn">Start Listening</button>
-        <button id="clearBtn">Clear</button>
-        <button id="dataBtn">Show/Hide Data</button>
-        <button id="copyDataBtn">Copy Data</button>
-    </div>
-    
-    <div id="status">Not listening</div>
-    <div id="interimSpeech"></div>
-    <div id="dynamicText"></div>
-    
-    <svg id="volumeIndicator" viewBox="0 0 120 120">
-        <circle id="volumeCircle" cx="60" cy="60" r="10" fill="#808080"/>
-    </svg>
-    
-    <div id="dataContainer">
-        <h3>Recognized Words Data:</h3>
-        <textarea id="rawData" readonly></textarea>
-    </div>
+    <h1>Text+</h1>
 
-    <script src="script.js"></script>
+    <!-- Add audio wave section -->
+        <div class="container">
+            <div class="controls">
+                <!-- Master height control -->
+                <div class="control-group master">
+                    <label for="master-height">Master Height Control (0-100%)</label>
+                    <div class="slider-container">
+                        <input type="range" id="master-height" min="0" max="100" value="50">
+                        <span id="master-height-value">50%</span>
+                    </div>
+                </div>
+    
+                <!-- Height-related controls including descender -->
+                <div class="control-group height-related">
+                    <label for="uppercase-height">Uppercase Height (528-760)</label>
+                    <div class="slider-container">
+                        <input type="range" id="uppercase-height" min="528" max="760" value="644">
+                        <span id="uppercase-height-value">644</span>
+                    </div>
+                </div>
+                <div class="control-group height-related">
+                    <label for="lowercase-height">Lowercase Height (416-570)</label>
+                    <div class="slider-container">
+                        <input type="range" id="lowercase-height" min="416" max="570" value="493">
+                        <span id="lowercase-height-value">493</span>
+                    </div>
+                </div>
+                <div class="control-group height-related">
+                    <label for="ascender-height">Ascender Height (649-854)</label>
+                    <div class="slider-container">
+                        <input type="range" id="ascender-height" min="649" max="854" value="750">
+                        <span id="ascender-height-value">750</span>
+                    </div>
+                </div>
+                <div class="control-group height-related">
+                    <label for="figure-height">Figure Height (560-788)</label>
+                    <div class="slider-container">
+                        <input type="range" id="figure-height" min="560" max="788" value="674">
+                        <span id="figure-height-value">674</span>
+                    </div>
+                </div>
+                <div class="control-group height-related">
+                    <label for="descender-depth">Descender Depth (-305--98)</label>
+                    <div class="slider-container">
+                        <input type="range" id="descender-depth" min="-305" max="-98" value="-203">
+                        <span id="descender-depth-value">-203</span>
+                    </div>
+                </div>
+    
+                <!-- Other controls -->
+                <div class="control-group">
+                    <label for="weight">Weight (100-1000)</label>
+                    <div class="slider-container">
+                        <input type="range" id="weight" min="100" max="1000" value="300">
+                        <span id="weight-value">300</span>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label for="slant">Slant (-10-0)</label>
+                    <div class="slider-container">
+                        <input type="range" id="slant" min="-10" max="0" value="0" step="0.1">
+                        <span id="slant-value">0</span>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label for="width">Width (25-151)</label>
+                    <div class="slider-container">
+                        <input type="range" id="width" min="25" max="151" value="100">
+                        <span id="width-value">100</span>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label for="counter-width">Counter Width (323-603)</label>
+                    <div class="slider-container">
+                        <input type="range" id="counter-width" min="323" max="603" value="426">
+                        <span id="counter-width-value">426</span>
+                    </div>
+                </div>
+                <button id="reset">Reset to Defaults</button>
+            </div>
+        </div>
+        <div class="preview">
+            <div class="preview-text">
+                AaBbCc 123
+            </div>
+            <div class="sample-text">
+                The quick brown fox jumps over the lazy dog. 
+                PACK MY BOX WITH FIVE DOZEN LIQUOR JUGS.
+                0123456789 !@#$%^&*()
+            </div>
+        </div>
+        
+        <div class="visualizer-container">
+            <canvas id="waveform"></canvas>
+        </div>
+        
+        <div class="transcription-container">
+            <div id="transcription"></div>
+        </div>
+
+        <div id="timer">00:00</div>
+        <div class="audio-controls">
+            <div class="slider-container">
+                <span class="rate-label">Update Rate: 20ms</span>
+                <input type="range" id="rateSlider" min="10" max="100" value="20">
+            </div>
+            <div class="slider-container">
+                <span class="rate-label">Smoothing: 0.1</span>
+                <input type="range" id="smoothingSlider" min="1" max="50" value="10">
+            </div>
+            <div class="button-container">
+                <button onclick="toggleRecording()">Start Recording</button>
+                <button onclick="clearAll()">Clear</button>
+            </div>
+        </div>
+
+    <script>
+        const defaultValues = {
+            'master-height': 50,
+            'weight': 300,
+            'slant': 0,
+            'width': 100,
+            'counter-width': 426,
+            'uppercase-height': 644,
+            'lowercase-height': 493,
+            'ascender-height': 750,
+            'figure-height': 674,
+            'descender-depth': -203
+        };
+
+        const heightControls = {
+            'uppercase-height': { min: 528, max: 760, default: 644 },
+            'lowercase-height': { min: 416, max: 570, default: 493 },
+            'ascender-height': { min: 649, max: 854, default: 750 },
+            'figure-height': { min: 560, max: 788, default: 674 },
+            'descender-depth': { min: -305, max: -98, default: -203, inverse: true }
+        };
+
+        function updateHeightControls(percentage) {
+            Object.entries(heightControls).forEach(([id, range]) => {
+                const input = document.getElementById(id);
+                const valueDisplay = document.getElementById(`${id}-value`);
+                const range_size = range.max - range.min;
+                // For descender, invert the percentage since we want it to go deeper (more negative) as height increases
+                const effectivePercentage = range.inverse ? (100 - percentage) : percentage;
+                const value = Math.round(range.min + (range_size * (effectivePercentage / 100)));
+                input.value = value;
+                valueDisplay.textContent = value;
+            });
+        }
+
+        const masterHeightControl = document.getElementById('master-height');
+        masterHeightControl.addEventListener('input', (e) => {
+            const percentage = parseInt(e.target.value);
+            document.getElementById('master-height-value').textContent = `${percentage}%`;
+            updateHeightControls(percentage);
+            updateFontVariationSettings();
+        });
+
+        const controls = document.querySelectorAll('input[type="range"]');
+        const previewElements = document.querySelectorAll('.preview-text, .sample-text');
+        const resetButton = document.getElementById('reset');
+
+        function updateFontVariationSettings() {
+            const settings = {
+                'wght': document.getElementById('weight').value,
+                'slnt': document.getElementById('slant').value,
+                'wdth': document.getElementById('width').value,
+                'XTRA': document.getElementById('counter-width').value,
+                'YTUC': document.getElementById('uppercase-height').value,
+                'YTLC': document.getElementById('lowercase-height').value,
+                'YTAS': document.getElementById('ascender-height').value,
+                'YTDE': document.getElementById('descender-depth').value,
+                'YTFI': document.getElementById('figure-height').value,
+                'GRAD': 8,
+                'XOPQ': 138,
+                'YOPQ': 61
+            };
+
+            const fontSettings = Object.entries(settings)
+                .map(([key, value]) => `"${key}" ${value}`)
+                .join(', ');
+
+            previewElements.forEach(element => {
+                element.style.fontVariationSettings = fontSettings;
+            });
+        }
+
+        controls.forEach(control => {
+            if (control.id !== 'master-height') {
+                control.addEventListener('input', (e) => {
+                    document.getElementById(`${e.target.id}-value`).textContent = e.target.value;
+                    updateFontVariationSettings();
+                });
+            }
+        });
+
+        resetButton.addEventListener('click', () => {
+            Object.entries(defaultValues).forEach(([id, value]) => {
+                const input = document.getElementById(id);
+                const valueDisplay = document.getElementById(`${id}-value`);
+                input.value = value;
+                valueDisplay.textContent = id === 'master-height' ? `${value}%` : value;
+            });
+            updateHeightControls(defaultValues['master-height']);
+            updateFontVariationSettings();
+        });
+
+        // Initial update
+        updateFontVariationSettings();
+
+        // Add these updates to the script section
+        const smoothingSlider = document.getElementById('smoothingSlider');
+        const smoothingLabel = smoothingSlider.parentElement.querySelector('.rate-label');
+
+        smoothingSlider.addEventListener('input', (e) => {
+            smoothingFactor = parseInt(e.target.value) / 100;
+            smoothingLabel.textContent = `Smoothing: ${smoothingFactor.toFixed(2)}`;
+        });
+    </script>
+
+    <!-- Add audio wave script -->
+    <script>
+        let audioContext;
+        let analyser;
+        let dataArray;
+        let animationId;
+        let isRecording = false;
+        let recordingStartTime;
+        let waveformHistory = [];
+        let lastSampleTime = 0;
+        let sampleInterval = 20;
+        let recognition;
+
+        const canvas = document.getElementById('waveform');
+        const ctx = canvas.getContext('2d');
+        const transcriptionDiv = document.getElementById('transcription');
+        canvas.width = canvas.parentElement.clientWidth;
+        const width = canvas.width;
+        const height = canvas.height;
+        const timerElement = document.getElementById('timer');
+        const rateSlider = document.getElementById('rateSlider');
+        const rateLabel = document.querySelector('.rate-label');
+
+        const AMPLIFICATION = 3.5;
+        const MIN_AMPLITUDE = 0.5;
+        const NOISE_THRESHOLD = 2;
+        const BAR_SPACING = 3;
+        const BAR_WIDTH = 2;
+
+        // Initialize speech recognition
+        if ('webkitSpeechRecognition' in window) {
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                let finalTranscript = '';
+
+                // Get the existing final transcript from the div (excluding any interim text)
+                finalTranscript = transcriptionDiv.innerHTML.replace(/<span[^>]*>.*?<\/span>/g, '');
+
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript + '\n';
+                    } else {
+                        interimTranscript = transcript; // Just use the latest interim result
+                    }
+                }
+
+                transcriptionDiv.innerHTML = finalTranscript + '<span style="color: #666;">' + interimTranscript + '</span>';
+                transcriptionDiv.scrollTop = transcriptionDiv.scrollHeight;
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+            };
+        }
+
+        rateSlider.addEventListener('input', (e) => {
+            sampleInterval = parseInt(e.target.value);
+            rateLabel.textContent = `Update Rate: ${sampleInterval}ms`;
+        });
+
+        function updateTimer() {
+            if (!isRecording) return;
+            const elapsed = Date.now() - recordingStartTime;
+            const seconds = Math.floor((elapsed / 1000) % 60);
+            const minutes = Math.floor(elapsed / 1000 / 60);
+            timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            setTimeout(updateTimer, 1000);
+        }
+
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioContext.createMediaStreamSource(stream);
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                
+                source.connect(analyser);
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+                
+                waveformHistory = [];
+                recordingStartTime = Date.now();
+                lastSampleTime = 0;
+                updateTimer();
+                draw();
+
+                // Start speech recognition
+                if (recognition) {
+                    recognition.start();
+                }
+            } catch (error) {
+                console.error('Error starting recording:', error);
+                alert('Error accessing microphone. Please make sure you have a microphone connected and have granted permission to use it.');
+            }
+        }
+
+        function stopRecording() {
+            if (audioContext) {
+                audioContext.close();
+            }
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            if (recognition) {
+                recognition.stop();
+            }
+            timerElement.textContent = '00:00';
+        }
+
+        function clearAll() {
+            waveformHistory = [];
+            ctx.clearRect(0, 0, width, height);
+            transcriptionDiv.innerHTML = '';
+        }
+
+        function toggleRecording() {
+            const button = document.querySelector('button');
+            if (!isRecording) {
+                startRecording();
+                button.textContent = 'Stop Recording';
+                isRecording = true;
+            } else {
+                stopRecording();
+                button.textContent = 'Start Recording';
+                isRecording = false;
+            }
+        }
+
+        let smoothedHeight = 50; // Start at default value
+        const smoothingFactor = 0.1; // Adjust this value between 0 and 1 (lower = smoother)
+
+        function draw() {
+            if (!isRecording) return;
+            animationId = requestAnimationFrame(draw);
+
+            const currentTime = Date.now();
+            if (currentTime - lastSampleTime < sampleInterval) {
+                return;
+            }
+
+            analyser.getByteTimeDomainData(dataArray);
+
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+                sum += Math.abs(dataArray[i] - 128);
+            }
+            const average = sum / dataArray.length;
+            
+            const normalizedAverage = average > NOISE_THRESHOLD ? average : MIN_AMPLITUDE;
+            waveformHistory.push(normalizedAverage);
+
+            const maxAmplitude = 50;
+            const rawPercentage = (normalizedAverage / maxAmplitude) * 100;
+            const targetHeight = Math.min(Math.round(rawPercentage * 0.6 + 30), 80);
+            
+            // Apply smoothing
+            smoothedHeight = smoothedHeight + (smoothingFactor * (targetHeight - smoothedHeight));
+            const heightPercentage = Math.round(smoothedHeight);
+            
+            // Update master height control and trigger updates
+            const masterHeightControl = document.getElementById('master-height');
+            masterHeightControl.value = heightPercentage;
+            document.getElementById('master-height-value').textContent = `${heightPercentage}%`;
+            updateHeightControls(heightPercentage);
+            updateFontVariationSettings();
+
+            const maxBars = Math.floor(width / (BAR_WIDTH + BAR_SPACING));
+            if (waveformHistory.length > maxBars) {
+                waveformHistory.shift();
+            }
+
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.beginPath();
+            ctx.strokeStyle = '#007AFF';
+            ctx.lineWidth = BAR_WIDTH;
+
+            waveformHistory.forEach((amplitude, index) => {
+                const x = width - (waveformHistory.length - index) * (BAR_WIDTH + BAR_SPACING);
+                let normalizedAmplitude;
+                
+                if (amplitude <= MIN_AMPLITUDE) {
+                    normalizedAmplitude = 2;
+                } else {
+                    normalizedAmplitude = (amplitude / 128) * (height / 2) * AMPLIFICATION;
+                }
+                
+                ctx.moveTo(x, height/2 - normalizedAmplitude);
+                ctx.lineTo(x, height/2 + normalizedAmplitude);
+            });
+
+            ctx.stroke();
+            lastSampleTime = currentTime;
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            canvas.width = canvas.parentElement.clientWidth;
+        });
+    </script>
 </body>
 </html>
