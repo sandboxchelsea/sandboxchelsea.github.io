@@ -273,6 +273,55 @@
             width: 30px;
             padding: 5px 2px;
         }
+
+        /* Text Input Component Styles */
+        .input-container {
+            width: 350px;
+            min-height: 78px;
+            background: #F2F2F2;
+            border-radius: 100px;
+            position: absolute;
+            padding: 8px;
+            left: 60%;
+            top: 80%;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+        }
+
+        .text-input {
+            width: 265px;
+            min-height: 62px;
+            background: white;
+            border: none;
+            border-radius: 100px;
+            padding: 16px;
+            margin-left: 0px;
+            font-size: 16px;
+            outline: none;
+            user-select: text;
+            resize: none;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+            line-height: 1.4;
+        }
+
+        .send-button {
+            width: 62px;
+            height: 62px;
+            background: black;
+            border: none;
+            border-radius: 100px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            margin-right: 0px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: sticky;
+            top: 8px;
+        }
     </style>
 </head>
 <body>
@@ -310,6 +359,12 @@
                 <div class="slider-handle">0.78</div>
             </div>
         </div>
+    </div>
+
+    <!-- Text Input Component -->
+    <div class="input-container draggable">
+        <textarea class="text-input" placeholder="Type something..."></textarea>
+        <button class="send-button">􀈟</button>
     </div>
 
     <script>
